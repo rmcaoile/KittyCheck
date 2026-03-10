@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
+import 'package:cat_pain_detector/home/camera.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -13,14 +14,17 @@ class HomePage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'images/cat_logo.png',
+              'assets/images/cat_logo.png',
               height: 250,
               scale: 0.5,
             ),
             const SizedBox(height: 40),
             InkWell(
               onTap: () {
-                // TODO: camera page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CameraPage()),
+                );
               },
               borderRadius: BorderRadius.circular(20),
               child: Container(

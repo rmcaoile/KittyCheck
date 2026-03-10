@@ -31,27 +31,27 @@ class CustomBottomNavBar extends StatelessWidget {
           topRight: Radius.circular(18),
         ),
         child: BottomNavigationBar(
-          items: <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: currentIndex == 0 ? const Icon(Icons.home) : const Icon(Icons.home_outlined),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: currentIndex == 1 ? const Icon(Icons.history) : const Icon(Icons.history_outlined),
-              label: 'History',
-            ),
-            BottomNavigationBarItem(
-              icon: currentIndex == 2 ? const Icon(Icons.info) : const Icon(Icons.info_outlined),
-              label: 'About',
-            ),
-          ],
-          currentIndex: currentIndex,
-          selectedItemColor: colorScheme.onSurface,
-          unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.6),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          onTap: onTap,
-        ),
+            items: <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: currentIndex == 0 ? const Icon(Icons.home, size: 35) : const Icon(Icons.home_outlined, size: 33),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: currentIndex == 1 ? const Icon(Icons.history, size: 35) : const Icon(Icons.history_outlined, size: 33),
+                label: 'History',
+              ),
+              BottomNavigationBarItem(
+                icon: currentIndex == 2 ? const Icon(Icons.info, size: 35) : const Icon(Icons.info_outlined, size: 33),
+                label: 'About',
+              ),
+            ],
+            currentIndex: currentIndex,
+            selectedItemColor: colorScheme.onSurface,
+            unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.6),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            onTap: onTap,
+          ),
       ),
     );
   }
