@@ -1,9 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/home/camera.dart';
+import 'package:cat_pain_detector/home/confirmation.dart';
+import 'package:cat_pain_detector/home/upload_image.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Future<void> _pickImage() async {
+    final imagePath = await ImagePickerService.pickImage(context);
+    if (imagePath != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConfirmationPage(imagePath: imagePath),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +68,7 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             InkWell(
-              onTap: () {
-                // TODO: upload page
-              },
+              onTap: _pickImage,
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: 300,

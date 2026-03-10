@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/home/confirmation.dart';
+import 'package:cat_pain_detector/home/upload_image.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -125,6 +126,18 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
+  Future<void> _pickFromGallery() async {
+    final imagePath = await ImagePickerService.pickImage(context);
+    if (imagePath != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConfirmationPage(imagePath: imagePath),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,11 +183,9 @@ class _CameraPageState extends State<CameraPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            // Gallery button (placeholder)
+                            // Gallery button
                             IconButton(
-                              onPressed: () {
-                                // TODO: Open gallery
-                              },
+                              onPressed: _pickFromGallery,
                               icon: Icon(
                                 Icons.photo_library,
                                 color: darkBlue,

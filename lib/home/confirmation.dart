@@ -15,7 +15,7 @@ class ConfirmationPage extends StatelessWidget {
         backgroundColor: lightBlue,
         centerTitle: true,
         title: const Text(
-          'Captured Image',
+          'Confirm Image',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -48,14 +48,14 @@ class ConfirmationPage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Retake button
+                // Cancel button
                 ElevatedButton.icon(
                   onPressed: () {
                     // Go back to camera
                     Navigator.of(context).pop();
                   },
-                  icon: Icon(Icons.camera_alt, color: darkBlue),
-                  label: const Text('Retake'),
+                  icon: Icon(Icons.cancel, color: darkBlue),
+                  label: const Text('Cancel'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: lightBlue,
                     foregroundColor: darkBlue,
