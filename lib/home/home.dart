@@ -8,8 +8,69 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: whiteColor,
-      child: const Center(
-        child: Text('Home Page'),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'images/cat_logo.png',
+              height: 250,
+              scale: 0.5,
+            ),
+            const SizedBox(height: 40),
+            InkWell(
+              onTap: () {
+                // TODO: camera page
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 300,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: lightBlue,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_alt, size: 30, color: darkBlue),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Use camera',
+                      style: TextStyle(color: darkBlue, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            InkWell(
+              onTap: () {
+                // TODO: upload page
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 300,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: lightBlue,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.upload, size: 30, color: darkBlue),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Upload cat photo',
+                      style: TextStyle(color: darkBlue, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
