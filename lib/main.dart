@@ -5,6 +5,8 @@ import 'package:cat_pain_detector/history/history.dart';
 import 'package:cat_pain_detector/about/about.dart';
 import 'package:cat_pain_detector/theme.dart';
 
+final GlobalKey<_MyHomePageState> homePageKey = GlobalKey<_MyHomePageState>();
+
 void main() {
   runApp(const MyApp());
 }
@@ -17,7 +19,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Feline Grimace Scale',
       theme: appTheme,
-      home: const MyHomePage(),
+      home: MyHomePage(key: homePageKey),
     );
   }
 }
@@ -47,6 +49,12 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  void switchToHistory() {
+    setState(() {
+      _selectedIndex = 1; // History index
     });
   }
 

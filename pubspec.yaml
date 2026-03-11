@@ -37,6 +37,9 @@ dependencies:
   camera: ^0.10.5+9
   permission_handler: ^11.3.1
   image_picker: ^1.1.2
+  sqflite: ^2.3.0
+  path_provider: ^2.1.2
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +67,7 @@ flutter:
   assets:
     - assets/images/cat_logo.png
     - assets/images/cat_sample.png
+    - assets/fgs_manual/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
