@@ -149,6 +149,7 @@ class _HistoryPageState extends State<HistoryPage> {
         builder: (context) => ResultDetailPage(
           result: result,
           showDeleteButton: true, // Show delete button in history view
+          onResultDeleted: _loadResults, // Refresh list after deletion
         ),
       ),
     );

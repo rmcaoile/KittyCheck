@@ -2,15 +2,19 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
+import 'package:cat_pain_detector/services/database_service.dart';
+import 'package:cat_pain_detector/services/file_service.dart';
 
 class ResultDetailPage extends StatelessWidget {
   final FGSResult result;
   final bool showDeleteButton; // true for history view, false for result view
+  final VoidCallback? onResultDeleted;
 
   const ResultDetailPage({
     super.key,
     required this.result,
     this.showDeleteButton = false,
+    this.onResultDeleted,
   });
 
   void _navigateToEdit(BuildContext context) {
@@ -27,11 +31,60 @@ class ResultDetailPage extends StatelessWidget {
     );
   }
 
-  void _deleteResult(BuildContext context) {
-    // TODO: Show delete confirmation and delete
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('TODO: Delete result confirmation')),
+  void _deleteResult(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Result'),
+          content: const Text('Are you sure you want to delete this result? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmed == true) {
+      if (result.id == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Cannot delete result without ID')),
+        );
+        return;
+      }
+
+      try {
+        // Delete from database
+        final dbService = DatabaseService();
+        await dbService.deleteResult(result.id!);
+
+        // Delete associated image files
+        await FileService.deleteResultImages(result);
+
+        // Notify parent to refresh the list
+        onResultDeleted?.call();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Result deleted successfully')),
+        );
+
+        // Navigate back
+        Navigator.of(context).pop();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting result: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildFauItem(BuildContext context, String region, String imagePath, int score) {
