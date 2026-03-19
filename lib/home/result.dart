@@ -77,11 +77,12 @@ class _FGSResultPageState extends State<FGSResultPage> {
             TextButton(
               onPressed: () async {
                 final catName = nameController.text.trim();
-                Navigator.of(context).pop();
+                FocusScope.of(context).unfocus();
 
                 try {
                   await _saveResult(catName);
                   if (mounted) {
+                    Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Result saved successfully!')),
                     );
@@ -144,6 +145,34 @@ class _FGSResultPageState extends State<FGSResultPage> {
           SnackBar(content: Text('Error saving result: $e')),
         );
       }
+    }
+  }
+
+  String _getAssessmentText(int score) {
+    if (score == 0) {
+      return 'This cat is not in pain. However, if you are a cat owner and you are concerned or think your cat may be in pain, please consult your veterinary surgeon.';
+    } else if (score >= 1 && score <= 3) {
+      return 'This cat is not in pain or has mild pain. Pain should be reevaluated at regular intervals since FGS scores could increase, and the cat might require analgesics.';
+    } else if (score >= 4 && score <= 8) {
+      return 'This cat is likely to be in pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
+    } else if (score >= 9 && score <= 10) {
+      return 'This cat is likely to be in severe pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
+    } else {
+      return 'Invalid score';
+    }
+  }
+
+  Color _getScoreColor(int score) {
+    if (score == 0) {
+      return const Color.fromRGBO(176, 209, 153, 1.0);
+    } else if (score >= 1 && score <= 3) {
+      return const Color.fromRGBO(255, 246, 155, 1.0);
+    } else if (score >= 4 && score <= 8) {
+      return const Color.fromRGBO(224, 119, 91, 1.0);
+    } else if (score >= 9 && score <= 10) {
+      return const Color.fromRGBO(205, 23, 25, 1.0);
+    } else {
+      return lightBlue; // fallback
     }
   }
 
@@ -222,8 +251,8 @@ class _FGSResultPageState extends State<FGSResultPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: lightBlue.withValues(alpha: 0.1),
-                border: Border.all(color: lightBlue, width: 2),
+                color: _getScoreColor(totalFgsScore).withValues(alpha: 0.2),
+                border: Border.all(color: _getScoreColor(totalFgsScore), width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -260,22 +289,9 @@ class _FGSResultPageState extends State<FGSResultPage> {
               ),
             ),
             const SizedBox(height: 10),
-            // TODO: Assessment based on score
-            const Text(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.5,
-                color: Colors.black87,
-              ),
-              textAlign: TextAlign.justify,
-            ),
-            const SizedBox(height: 20),
-
-            // Lorem ipsum text
-            const Text(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-              style: TextStyle(
+            Text(
+              _getAssessmentText(totalFgsScore),
+              style: const TextStyle(
                 fontSize: 16,
                 height: 1.5,
                 color: Colors.black87,

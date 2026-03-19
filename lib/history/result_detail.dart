@@ -18,6 +18,20 @@ class ResultDetailPage extends StatelessWidget {
     this.onResultDeleted,
   });
 
+  Color _getScoreColor(int score) {
+    if (score == 0) {
+      return const Color.fromRGBO(176, 209, 153, 1.0);
+    } else if (score >= 1 && score <= 3) {
+      return const Color.fromRGBO(255, 246, 155, 1.0);
+    } else if (score >= 4 && score <= 8) {
+      return const Color.fromRGBO(224, 119, 91, 1.0);
+    } else if (score >= 9 && score <= 10) {
+      return const Color.fromRGBO(205, 23, 25, 1.0);
+    } else {
+      return const Color(0xFF2196F3); // fallback blue
+    }
+  }
+
   void _navigateToEdit(BuildContext context) {
     // TODO: Navigate to edit page
     ScaffoldMessenger.of(context).showSnackBar(
@@ -222,8 +236,8 @@ class ResultDetailPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-              color: lightBlue.withValues(alpha: 0.1),
-                border: Border.all(color: lightBlue, width: 2),
+                color: _getScoreColor(result.totalFgsScore).withValues(alpha: 0.2),
+                border: Border.all(color: _getScoreColor(result.totalFgsScore), width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
