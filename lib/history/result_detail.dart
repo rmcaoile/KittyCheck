@@ -4,6 +4,7 @@ import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/services/file_service.dart';
+import 'package:cat_pain_detector/history/comparison_page.dart';
 
 class ResultDetailPage extends StatelessWidget {
   final FGSResult result;
@@ -25,9 +26,10 @@ class ResultDetailPage extends StatelessWidget {
   }
 
   void _navigateToComparison(BuildContext context, String facialRegion) {
-    // TODO: Navigate to comparison page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('TODO: View $facialRegion comparison page')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ComparisonPage(result: result, region: facialRegion),
+      ),
     );
   }
 
