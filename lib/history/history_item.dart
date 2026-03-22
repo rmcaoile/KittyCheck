@@ -78,16 +78,6 @@ class HistoryItem extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 4),
-
-                    // Total score
-                    Text(
-                      'Score: ${result.totalFgsScore}/10',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
 
                     // Date
                     Text(
@@ -100,6 +90,17 @@ class HistoryItem extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Total score
+              Text(
+                'Score: ${result.totalFgsScore}/10',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(width: 8),
 
               // Arrow icon
               Icon(
