@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:cat_pain_detector/theme.dart';
 
 class ImageViewerPage extends StatefulWidget {
   final String imagePath;
@@ -18,8 +17,6 @@ class ImageViewerPage extends StatefulWidget {
 
 class _ImageViewerPageState extends State<ImageViewerPage> {
   final TransformationController _transformationController = TransformationController();
-  final GlobalKey _interactiveViewerKey = GlobalKey();
-  double _currentScale = 1.0;
   bool _isZoomedIn = false;
   Offset? _lastZoomPosition;
 
@@ -37,41 +34,26 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
     const double zoomScale = 2.0;
 
     setState(() {
-      if (!_isZoomedIn) {
-        // Zoom in at tap location
+      if (_isZoomedIn) {
+        // Zoom out to original size
+        _isZoomedIn = false;
+        _transformationController.value = Matrix4.identity();
+      } else {
+        // Zoom in at tap location or center
         _isZoomedIn = true;
-        _currentScale = zoomScale;
 
         if (_lastZoomPosition != null) {
-          final double px = _lastZoomPosition!.dx;
-          final double py = _lastZoomPosition!.dy;
-
-          // Zoom at the tapped point: translate so point becomes origin, scale, translate back
+          // Zoom at the tapped point
+          final px = _lastZoomPosition!.dx;
+          final py = _lastZoomPosition!.dy;
           _transformationController.value = Matrix4.identity()
             ..translate(px, py)
             ..scale(zoomScale)
             ..translate(-px, -py);
         } else {
-          // Fallback to center zoom if no position available
-          final RenderBox? renderBox = _interactiveViewerKey.currentContext?.findRenderObject() as RenderBox?;
-          if (renderBox != null) {
-            final Size size = renderBox.size;
-            final double centerX = size.width / 2;
-            final double centerY = size.height / 2;
-
-            _transformationController.value = Matrix4.identity()
-              ..translate(centerX, centerY)
-              ..scale(zoomScale)
-              ..translate(-centerX, -centerY);
-          } else {
-            _transformationController.value = Matrix4.identity()..scale(zoomScale);
-          }
+          // Zoom from origin if no tap position
+          _transformationController.value = Matrix4.identity()..scale(zoomScale);
         }
-      } else {
-        // Zoom out to fit
-        _isZoomedIn = false;
-        _currentScale = 1.0;
-        _transformationController.value = Matrix4.identity();
       }
     });
   }
@@ -93,13 +75,9 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
           onDoubleTapDown: _onDoubleTapDown,
           onDoubleTap: _onDoubleTap,
           child: InteractiveViewer(
-            key: _interactiveViewerKey,
             transformationController: _transformationController,
             minScale: 0.5,
             maxScale: 4.0,
-            onInteractionUpdate: (details) {
-              _currentScale = details.scale;
-            },
             child: widget.isAsset
                 ? Image.asset(
                     widget.imagePath,

@@ -18,6 +18,7 @@ class _CameraPageState extends State<CameraPage> {
   bool _isCameraInitialized = false;
   bool _isPermissionGranted = false;
   int _currentCameraIndex = 0;
+  FlashMode _currentFlashMode = FlashMode.off;
 
   @override
   void initState() {
@@ -74,6 +75,8 @@ class _CameraPageState extends State<CameraPage> {
     if (!_isCameraInitialized || _controller == null) return;
 
     try {
+      // Set flash mode before taking picture
+      await _controller!.setFlashMode(_currentFlashMode);
       final image = await _controller!.takePicture();
       if (mounted) {
         // Navigate to result page
@@ -138,6 +141,20 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
+  void _toggleFlash() {
+    setState(() {
+      _currentFlashMode = _currentFlashMode == FlashMode.off
+          ? FlashMode.always
+          : FlashMode.off;
+    });
+  }
+
+  IconData _getFlashIcon() {
+    return _currentFlashMode == FlashMode.off
+        ? Icons.flash_off
+        : Icons.flash_on;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,6 +169,15 @@ class _CameraPageState extends State<CameraPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            onPressed: _toggleFlash,
+            icon: Icon(
+              _getFlashIcon(),
+              color: darkBlue,
+            ),
+          ),
+        ],
       ),
       body: _isPermissionGranted
           ? _isCameraInitialized && _controller != null
