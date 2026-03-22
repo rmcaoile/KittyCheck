@@ -3,7 +3,7 @@ import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/history/history_item.dart';
-import 'package:cat_pain_detector/history/result_detail.dart';
+import 'package:cat_pain_detector/history/saved_result_page.dart';
 
 enum SortOption {
   dateDesc('Date ↓'),
@@ -146,9 +146,8 @@ class _HistoryPageState extends State<HistoryPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ResultDetailPage(
+        builder: (context) => SavedResultPage(
           result: result,
-          showDeleteButton: true, // Show delete button in history view
           onResultDeleted: _loadResults, // Refresh list after deletion
         ),
       ),
