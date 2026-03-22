@@ -4,6 +4,7 @@ import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
+import 'package:cat_pain_detector/home/fau_edit_page.dart';
 
 class EditResultPage extends StatefulWidget {
   final FGSResult result;
@@ -67,61 +68,81 @@ class _EditResultPageState extends State<EditResultPage> {
   int get _totalScore =>
       _earScore + _eyesScore + _muzzleScore + _whiskersScore + _headPositionScore;
 
-  String _getAssessmentText(int score) {
-    if (score == 0) {
-      return 'This cat is not in pain. However, if you are a cat owner and you are concerned or think your cat may be in pain, please consult your veterinary surgeon.';
-    } else if (score >= 1 && score <= 3) {
-      return 'This cat is not in pain or has mild pain. Pain should be reevaluated at regular intervals since FGS scores could increase, and the cat might require analgesics.';
-    } else if (score >= 4 && score <= 8) {
-      return 'This cat is likely to be in pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
-    } else if (score >= 9 && score <= 10) {
-      return 'This cat is likely to be in severe pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
-    } else {
-      return 'Invalid score';
-    }
-  }
 
-  Widget _buildScoreSlider(String label, int value, Function(int) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
+
+  Widget _buildFauItem(String region, String imagePath, int score, Function() onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!, width: 1),
+          borderRadius: BorderRadius.circular(8),
         ),
-        const SizedBox(height: 8),
-        Row(
+        child: Row(
           children: [
-            Text(
-              '$value',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: darkBlue,
+            // Cropped image
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                border: Border.all(color: lightBlue, width: 1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: imagePath.isNotEmpty
+                    ? Image.file(
+                        File(imagePath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 20),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 20),
+                      ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
+
+            // Region name
             Expanded(
-              child: Slider(
-                value: value.toDouble(),
-                min: 0,
-                max: 2,
-                divisions: 2,
-                activeColor: darkBlue,
-                inactiveColor: lightBlue,
-                onChanged: (newValue) {
-                  onChanged(newValue.toInt());
-                  _checkForChanges();
-                },
+              child: Text(
+                region,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
               ),
+            ),
+
+            // Score
+            Text(
+              'Score: $score/2',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Edit icon
+            Icon(
+              Icons.edit,
+              size: 16,
+              color: Colors.grey[400],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -193,6 +214,41 @@ class _EditResultPageState extends State<EditResultPage> {
 
     if (confirmed == true) {
       Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _navigateToFauEdit(String region) async {
+    final newScore = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FauEditPage(
+          result: widget.result,
+          region: region,
+        ),
+      ),
+    );
+
+    if (newScore != null) {
+      setState(() {
+        switch (region) {
+          case 'Ear':
+            _earScore = newScore;
+            break;
+          case 'Eyes':
+            _eyesScore = newScore;
+            break;
+          case 'Muzzle':
+            _muzzleScore = newScore;
+            break;
+          case 'Whiskers':
+            _whiskersScore = newScore;
+            break;
+          case 'Head Position':
+            _headPositionScore = newScore;
+            break;
+        }
+        _checkForChanges();
+      });
     }
   }
 
@@ -296,75 +352,23 @@ class _EditResultPageState extends State<EditResultPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildScoreSlider('Ear Score', _earScore, (value) => setState(() => _earScore = value)),
-                  const SizedBox(height: 16),
+                  _buildFauItem('Ear', widget.result.earImagePath ?? '', _earScore, () => _navigateToFauEdit('Ear')),
+                  const SizedBox(height: 8),
 
-                  _buildScoreSlider('Eyes Score', _eyesScore, (value) => setState(() => _eyesScore = value)),
-                  const SizedBox(height: 16),
+                  _buildFauItem('Eyes', widget.result.eyesImagePath ?? '', _eyesScore, () => _navigateToFauEdit('Eyes')),
+                  const SizedBox(height: 8),
 
-                  _buildScoreSlider('Muzzle Score', _muzzleScore, (value) => setState(() => _muzzleScore = value)),
-                  const SizedBox(height: 16),
+                  _buildFauItem('Muzzle', widget.result.muzzleImagePath ?? '', _muzzleScore, () => _navigateToFauEdit('Muzzle')),
+                  const SizedBox(height: 8),
 
-                  _buildScoreSlider('Whiskers Score', _whiskersScore, (value) => setState(() => _whiskersScore = value)),
-                  const SizedBox(height: 16),
+                  _buildFauItem('Whiskers', widget.result.whiskersImagePath ?? '', _whiskersScore, () => _navigateToFauEdit('Whiskers')),
+                  const SizedBox(height: 8),
 
-                  _buildScoreSlider('Head Position Score', _headPositionScore, (value) => setState(() => _headPositionScore = value)),
+                  _buildFauItem('Head Position', widget.result.headPositionImagePath ?? '', _headPositionScore, () => _navigateToFauEdit('Head Position')),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
 
-            // Total score preview
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: getScoreColor(_totalScore).withValues(alpha: 0.2),
-                border: Border.all(color: getScoreColor(_totalScore), width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Total FGS Score',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '$_totalScore / 10',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Assessment preview
-            const Text(
-              'Assessment Preview',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _getAssessmentText(_totalScore),
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.5,
-                color: Colors.black87,
-              ),
-              textAlign: TextAlign.justify,
-            ),
           ],
         ),
       ),
