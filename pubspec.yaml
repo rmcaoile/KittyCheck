@@ -41,6 +41,11 @@ dependencies:
   path_provider: ^2.1.2
   path: ^1.8.3
 
+  # ML dependencies for AI scoring
+  tflite_flutter: ^0.11.0
+  image: ^4.1.3
+  shared_preferences: ^2.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,6 +73,14 @@ flutter:
     - assets/images/cat_logo.png
     - assets/images/cat_sample.png
     - assets/fgs_manual/
+    # TFLite models for AI scoring
+    - assets/models/face_detector.tflite
+    - assets/models/region_detector.tflite
+    - assets/models/ears_scorer.tflite
+    - assets/models/eyes_scorer.tflite
+    - assets/models/muzzle_scorer.tflite
+    - assets/models/whiskers_scorer.tflite
+    - assets/models/head_scorer.tflite
 
 flutter_icons:
   android: "launcher_icon"

@@ -145,7 +145,7 @@ class _CameraPageState extends State<CameraPage> {
         backgroundColor: lightBlue,
         centerTitle: true,
         title: const Text(
-          'Feline Grimace Scale',
+          'KittyCheck',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(

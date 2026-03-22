@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/services/file_service.dart';
+import 'package:cat_pain_detector/services/scoring_settings_service.dart';
+import 'package:cat_pain_detector/services/ai_scoring_service.dart';
 import 'package:cat_pain_detector/history/result_detail.dart';
-import 'package:cat_pain_detector/history/history.dart';
+import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 import 'package:cat_pain_detector/main.dart';
 
 class FGSResultPage extends StatefulWidget {
@@ -26,21 +29,157 @@ class _FGSResultPageState extends State<FGSResultPage> {
   late int headPositionScore;
   late int totalFgsScore;
 
+  bool _isLoading = true;
+  String? _errorMessage;
+  bool _useAIScoring = false;
+
+  final AIScoringService _aiService = AIScoringService();
+  final ScoringSettingsService _settingsService = ScoringSettingsService();
+
   @override
   void initState() {
     super.initState();
-    _generateDummyScores();
+    _initializeScoring();
   }
 
-  void _generateDummyScores() {
-    final random = Random();
-    earScore = random.nextInt(3); // 0-2
-    eyesScore = random.nextInt(3);
-    muzzleScore = random.nextInt(3);
-    whiskersScore = random.nextInt(3);
-    headPositionScore = random.nextInt(3);
-    totalFgsScore = earScore + eyesScore + muzzleScore + whiskersScore + headPositionScore;
+  @override
+  void dispose() {
+    // Clean up temporary images when the widget is disposed
+    _cleanupTempImages();
+    super.dispose();
   }
+
+  Future<void> _cleanupTempImages() async {
+    if (_tempCroppedImagePaths != null) {
+      for (final path in _tempCroppedImagePaths!.values) {
+        try {
+          final file = File(path);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      _tempCroppedImagePaths = null;
+    }
+  }
+
+  Future<void> _initializeScoring() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Check if AI scoring is enabled
+      _useAIScoring = await _settingsService.getUseAIScoring();
+
+      if (_useAIScoring) {
+        // AI scoring: perform full AI processing
+        await _runAIScoring();
+      } else {
+        // Random scoring: skip AI, just generate random scores with duplicate images
+        await _runRandomScoring();
+      }
+    } catch (e) {
+      // If AI fails, show error (don't fall back to random)
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Map<String, String>? _tempCroppedImagePaths;
+
+  Future<void> _runAIScoring() async {
+    try {
+      // Initialize AI models (only once)
+      await _aiService.initialize();
+
+      // Perform AI cropping and scoring
+      final result = await _aiService.scoreImage(widget.imagePath);
+      final scores = result['scores'] as Map<String, int>;
+      final croppedImages = result['croppedImages'] as Map<String, Uint8List>;
+
+      // Save cropped images temporarily
+      _tempCroppedImagePaths = await _saveTempCroppedImages(croppedImages);
+
+      // Use AI-calculated scores
+      earScore = scores['ears'] ?? 0;
+      eyesScore = scores['eyes'] ?? 0;
+      muzzleScore = scores['muzzle'] ?? 0;
+      whiskersScore = scores['whiskers'] ?? 0;
+      headPositionScore = scores['head'] ?? 0;
+      totalFgsScore = earScore + eyesScore + muzzleScore + whiskersScore + headPositionScore;
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      throw Exception('AI scoring failed: $e');
+    }
+  }
+
+  Future<void> _runRandomScoring() async {
+    try {
+      // Generate random scores
+      final random = Random();
+      earScore = random.nextInt(3); // 0-2
+      eyesScore = random.nextInt(3);
+      muzzleScore = random.nextInt(3);
+      whiskersScore = random.nextInt(3);
+      headPositionScore = random.nextInt(3);
+      totalFgsScore = earScore + eyesScore + muzzleScore + whiskersScore + headPositionScore;
+
+      // Create duplicate images for display (no AI processing)
+      final tempDir = await FileService.getAppDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final paths = <String, String>{};
+
+      // Create copies of the original image for each region
+      final regions = ['ears', 'eyes', 'muzzle', 'whiskers', 'head'];
+      for (final region in regions) {
+        final fileName = 'temp_${region}_${timestamp}.jpg';
+        final filePath = '$tempDir/$fileName';
+
+        // Copy the original image
+        await File(widget.imagePath).copy(filePath);
+        paths[region] = filePath;
+      }
+
+      _tempCroppedImagePaths = paths;
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      throw Exception('Random scoring failed: $e');
+    }
+  }
+
+  Future<Map<String, String>> _saveTempCroppedImages(Map<String, Uint8List> croppedImages) async {
+    final tempDir = await FileService.getAppDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final paths = <String, String>{};
+
+    // Save each cropped image as a temporary file
+    for (final entry in croppedImages.entries) {
+      final region = entry.key;
+      final imageData = entry.value;
+      final fileName = 'temp_${region}_${timestamp}.jpg';
+      final filePath = '$tempDir/$fileName';
+
+      final file = File(filePath);
+      await file.writeAsBytes(imageData);
+      paths[region] = filePath;
+    }
+
+    return paths;
+  }
+
+
 
   Future<void> _showSaveDialog() async {
     final TextEditingController nameController = TextEditingController();
@@ -197,68 +336,176 @@ class _FGSResultPageState extends State<FGSResultPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // TODO: Focus on face
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: lightBlue, width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(widget.imagePath),
-                  fit: BoxFit.cover,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewerPage(imagePath: widget.imagePath),
+                  ),
+                );
+              },
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  border: Border.all(color: lightBlue, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(widget.imagePath),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
 
-            // View more details button
-            TextButton.icon(
-              onPressed: () {
-                // Create temporary result for viewing details
-                final tempResult = FGSResult(
-                  catName: 'Unsaved Result',
-                  dateTime: DateTime.now(),
-                  totalFgsScore: totalFgsScore,
-                  earScore: earScore,
-                  eyesScore: eyesScore,
-                  muzzleScore: muzzleScore,
-                  whiskersScore: whiskersScore,
-                  headPositionScore: headPositionScore,
-                  originalImagePath: widget.imagePath,
-                  // No cropped images yet since not saved
-                );
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ResultDetailPage(result: tempResult),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('View more details >'),
-              style: TextButton.styleFrom(
-                foregroundColor: darkBlue,
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Total FGS Score box
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _getScoreColor(totalFgsScore).withValues(alpha: 0.2),
-                border: Border.all(color: _getScoreColor(totalFgsScore), width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
+            // Show loading indicator if AI is processing
+            if (_isLoading)
+              Column(
                 children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 10),
+                  Text(
+                    _useAIScoring ? 'Analyzing image with AI...' : 'Generating random scores...',
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                  ),
+                ],
+              )
+            // Show error message if AI failed
+            else if (_errorMessage != null)
+              Column(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 10),
                   const Text(
-                    'Total FGS Score',
+                    'Analysis Failed',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: _initializeScoring,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: darkBlue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+            // Show results when ready
+            else
+              Column(
+                children: [
+                  // Scoring method indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _useAIScoring ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _useAIScoring ? Colors.green : Colors.orange,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _useAIScoring ? 'AI Scoring' : 'Random Scoring',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _useAIScoring ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // View more details button
+                  TextButton.icon(
+                    onPressed: () {
+                      // Create temporary result for viewing details
+                      final tempResult = FGSResult(
+                        catName: 'Unsaved Result',
+                        dateTime: DateTime.now(),
+                        totalFgsScore: totalFgsScore,
+                        earScore: earScore,
+                        eyesScore: eyesScore,
+                        muzzleScore: muzzleScore,
+                        whiskersScore: whiskersScore,
+                        headPositionScore: headPositionScore,
+                        originalImagePath: widget.imagePath,
+                        // Include temporary cropped images if available (AI scoring)
+                        earImagePath: _tempCroppedImagePaths?['ears'],
+                        eyesImagePath: _tempCroppedImagePaths?['eyes'],
+                        muzzleImagePath: _tempCroppedImagePaths?['muzzle'],
+                        whiskersImagePath: _tempCroppedImagePaths?['whiskers'],
+                        headPositionImagePath: _tempCroppedImagePaths?['head'],
+                      );
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ResultDetailPage(result: tempResult),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('View more details >'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: darkBlue,
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Total FGS Score box
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _getScoreColor(totalFgsScore).withValues(alpha: 0.2),
+                      border: Border.all(color: _getScoreColor(totalFgsScore), width: 2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Total FGS Score',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '$totalFgsScore / 10',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Assessment
+                  const Text(
+                    'Assessment',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -267,70 +514,49 @@ class _FGSResultPageState extends State<FGSResultPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '$totalFgsScore / 10',
+                    _getAssessmentText(totalFgsScore),
                     style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Colors.black87,
                     ),
+                    textAlign: TextAlign.justify,
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: Edit result
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('TODO: Edit result page')),
+                          );
+                        },
+                        icon: const Icon(Icons.edit, color: darkBlue),
+                        label: const Text('Edit result'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: lightBlue,
+                          foregroundColor: darkBlue,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _showSaveDialog,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save result'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: darkBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-
-            // Assessment
-            const Text(
-              'Assessment',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _getAssessmentText(totalFgsScore),
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.5,
-                color: Colors.black87,
-              ),
-              textAlign: TextAlign.justify,
-            ),
-            const SizedBox(height: 30),
-
-            // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Edit result
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('TODO: Edit result page')),
-                    );
-                  },
-                  icon: const Icon(Icons.edit, color: darkBlue),
-                  label: const Text('Edit result'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: lightBlue,
-                    foregroundColor: darkBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _showSaveDialog,
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save result'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: darkBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

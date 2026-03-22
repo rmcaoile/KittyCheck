@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Feline Grimace Scale',
+      title: 'KittyCheck',
       theme: appTheme,
       home: MyHomePage(key: homePageKey),
     );
@@ -41,7 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   static const List<String> _titles = <String>[
-    'Feline Grimace Scale',
+    'KittyCheck',
     'History',
     'About',
   ];

@@ -5,6 +5,7 @@ import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/services/file_service.dart';
 import 'package:cat_pain_detector/history/comparison_page.dart';
+import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 
 class ResultDetailPage extends StatelessWidget {
   final FGSResult result;
@@ -209,24 +210,34 @@ class ResultDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Cat face image
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: lightBlue, width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(result.originalImagePath),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                    );
-                  },
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewerPage(imagePath: result.originalImagePath),
+                  ),
+                );
+              },
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  border: Border.all(color: lightBlue, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(result.originalImagePath),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),

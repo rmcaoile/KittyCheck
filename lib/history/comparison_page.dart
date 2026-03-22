@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
+import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 
 class ComparisonPage extends StatelessWidget {
   final FGSResult result;
@@ -161,30 +162,42 @@ class ComparisonPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Subject's cropped image
-            Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                border: Border.all(color: lightBlue, width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: subjectImagePath != null && subjectImagePath.isNotEmpty
-                    ? Image.file(
-                        File(subjectImagePath),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                      ),
+            GestureDetector(
+              onTap: () {
+                if (subjectImagePath != null && subjectImagePath.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ImageViewerPage(imagePath: subjectImagePath),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  border: Border.all(color: lightBlue, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: subjectImagePath != null && subjectImagePath.isNotEmpty
+                      ? Image.file(
+                          File(subjectImagePath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                        ),
+                ),
               ),
             ),
             const SizedBox(height: 10),
