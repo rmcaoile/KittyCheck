@@ -94,10 +94,10 @@ class HistoryItem extends StatelessWidget {
               // Total score
               Text(
                 'Score: ${result.totalFgsScore}/10',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+                  color: getScoreColor(result.totalFgsScore),
                 ),
               ),
               const SizedBox(width: 8),
