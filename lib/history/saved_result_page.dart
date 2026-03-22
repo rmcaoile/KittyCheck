@@ -5,16 +5,32 @@ import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/history/result_detail.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
+import 'package:cat_pain_detector/home/edit_result.dart';
 
-class SavedResultPage extends StatelessWidget {
+class SavedResultPage extends StatefulWidget {
   final FGSResult result;
   final VoidCallback? onResultDeleted;
+  final VoidCallback? onResultUpdated;
 
   const SavedResultPage({
     super.key,
     required this.result,
     this.onResultDeleted,
+    this.onResultUpdated,
   });
+
+  @override
+  State<SavedResultPage> createState() => _SavedResultPageState();
+}
+
+class _SavedResultPageState extends State<SavedResultPage> {
+  late FGSResult _currentResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentResult = widget.result;
+  }
 
   Future<void> _deleteResult(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -39,7 +55,7 @@ class SavedResultPage extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      if (result.id == null) {
+      if (_currentResult.id == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Cannot delete result without ID')),
         );
@@ -49,10 +65,10 @@ class SavedResultPage extends StatelessWidget {
       try {
         // Delete from database
         final dbService = DatabaseService();
-        await dbService.deleteResult(result.id!);
+        await dbService.deleteResult(_currentResult.id!);
 
         // Notify parent to refresh the list
-        onResultDeleted?.call();
+        widget.onResultDeleted?.call();
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,11 +101,38 @@ class SavedResultPage extends StatelessWidget {
 
 
 
-  void _navigateToEdit(BuildContext context) {
-    // TODO: Navigate to edit page
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('TODO: Edit result page')),
+  Future<void> _refreshResult() async {
+    if (_currentResult.id != null) {
+      try {
+        final dbService = DatabaseService();
+        final updatedResult = await dbService.getResult(_currentResult.id!);
+        if (updatedResult != null && mounted) {
+          setState(() {
+            _currentResult = updatedResult;
+          });
+        }
+      } catch (e) {
+        // Ignore refresh errors
+      }
+    }
+  }
+
+  void _navigateToEdit(BuildContext context) async {
+    final editedResult = await Navigator.push<FGSResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditResultPage(
+          result: _currentResult,
+          isTemporary: false,
+        ),
+      ),
     );
+
+    // If result was edited, refresh the data
+    if (editedResult != null) {
+      await _refreshResult();
+      widget.onResultUpdated?.call();
+    }
   }
 
   @override
@@ -99,7 +142,7 @@ class SavedResultPage extends StatelessWidget {
         backgroundColor: lightBlue,
         centerTitle: true,
         title: Text(
-          result.catName,
+          _currentResult.catName,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -118,7 +161,7 @@ class SavedResultPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ImageViewerPage(imagePath: result.originalImagePath),
+                    builder: (context) => ImageViewerPage(imagePath: _currentResult.originalImagePath),
                   ),
                 );
               },
@@ -132,7 +175,7 @@ class SavedResultPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.file(
-                    File(result.originalImagePath),
+                    File(_currentResult.originalImagePath),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
@@ -153,8 +196,9 @@ class SavedResultPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ResultDetailPage(
-                      result: result,
+                      result: _currentResult,
                       showDeleteButton: false, // Don't show delete in details view
+                      onResultUpdated: () => _refreshResult(),
                     ),
                   ),
                 );
@@ -172,8 +216,8 @@ class SavedResultPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: getScoreColor(result.totalFgsScore).withValues(alpha: 0.2),
-                border: Border.all(color: getScoreColor(result.totalFgsScore), width: 2),
+                color: getScoreColor(_currentResult.totalFgsScore).withValues(alpha: 0.2),
+                border: Border.all(color: getScoreColor(_currentResult.totalFgsScore), width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -188,7 +232,7 @@ class SavedResultPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '${result.totalFgsScore} / 10',
+                    '${_currentResult.totalFgsScore} / 10',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -211,7 +255,7 @@ class SavedResultPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              _getAssessmentText(result.totalFgsScore),
+              _getAssessmentText(_currentResult.totalFgsScore),
               style: const TextStyle(
                 fontSize: 16,
                 height: 1.5,

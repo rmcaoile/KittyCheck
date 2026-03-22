@@ -10,6 +10,7 @@ import 'package:cat_pain_detector/services/scoring_settings_service.dart';
 import 'package:cat_pain_detector/services/ai_scoring_service.dart';
 import 'package:cat_pain_detector/history/result_detail.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
+import 'package:cat_pain_detector/home/edit_result.dart';
 import 'package:cat_pain_detector/main.dart';
 
 class FGSResultPage extends StatefulWidget {
@@ -423,7 +424,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
 
                   // View more details button
                   TextButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       // Create temporary result for viewing details
                       final tempResult = FGSResult(
                         catName: 'Unsaved Result',
@@ -443,12 +444,27 @@ class _FGSResultPageState extends State<FGSResultPage> {
                         headPositionImagePath: _tempCroppedImagePaths?['head'],
                       );
 
-                      Navigator.push(
+                      final updatedResult = await Navigator.push<FGSResult>(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ResultDetailPage(result: tempResult),
+                          builder: (context) => ResultDetailPage(
+                            result: tempResult,
+                            isTemporary: true,
+                          ),
                         ),
                       );
+
+                      // Update local scores if user made changes from details page
+                      if (updatedResult != null && mounted) {
+                        setState(() {
+                          earScore = updatedResult.earScore;
+                          eyesScore = updatedResult.eyesScore;
+                          muzzleScore = updatedResult.muzzleScore;
+                          whiskersScore = updatedResult.whiskersScore;
+                          headPositionScore = updatedResult.headPositionScore;
+                          totalFgsScore = updatedResult.totalFgsScore;
+                        });
+                      }
                     },
                     icon: const Icon(Icons.arrow_forward),
                     label: const Text('View more details >'),
@@ -517,11 +533,46 @@ class _FGSResultPageState extends State<FGSResultPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: Edit result
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('TODO: Edit result page')),
+                        onPressed: () async {
+                          // Create temporary result for editing
+                          final tempResult = FGSResult(
+                            catName: 'Unsaved Result',
+                            dateTime: DateTime.now(),
+                            totalFgsScore: totalFgsScore,
+                            earScore: earScore,
+                            eyesScore: eyesScore,
+                            muzzleScore: muzzleScore,
+                            whiskersScore: whiskersScore,
+                            headPositionScore: headPositionScore,
+                            originalImagePath: widget.imagePath,
+                            earImagePath: _tempCroppedImagePaths?['ears'],
+                            eyesImagePath: _tempCroppedImagePaths?['eyes'],
+                            muzzleImagePath: _tempCroppedImagePaths?['muzzle'],
+                            whiskersImagePath: _tempCroppedImagePaths?['whiskers'],
+                            headPositionImagePath: _tempCroppedImagePaths?['head'],
                           );
+
+                          final editedResult = await Navigator.push<FGSResult>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditResultPage(
+                                result: tempResult,
+                                isTemporary: true,
+                              ),
+                            ),
+                          );
+
+                          // Update local scores if user made changes
+                          if (editedResult != null && mounted) {
+                            setState(() {
+                              earScore = editedResult.earScore;
+                              eyesScore = editedResult.eyesScore;
+                              muzzleScore = editedResult.muzzleScore;
+                              whiskersScore = editedResult.whiskersScore;
+                              headPositionScore = editedResult.headPositionScore;
+                              totalFgsScore = editedResult.totalFgsScore;
+                            });
+                          }
                         },
                         icon: const Icon(Icons.edit, color: darkBlue),
                         label: const Text('Edit result'),

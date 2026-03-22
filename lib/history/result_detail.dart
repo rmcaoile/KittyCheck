@@ -6,32 +6,83 @@ import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/services/file_service.dart';
 import 'package:cat_pain_detector/history/comparison_page.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
+import 'package:cat_pain_detector/home/edit_result.dart';
 
-class ResultDetailPage extends StatelessWidget {
+class ResultDetailPage extends StatefulWidget {
   final FGSResult result;
   final bool showDeleteButton; // true for history view, false for result view
+  final bool isTemporary; // true for unsaved results, false for saved results
   final VoidCallback? onResultDeleted;
+  final VoidCallback? onResultUpdated;
 
   const ResultDetailPage({
     super.key,
     required this.result,
     this.showDeleteButton = false,
+    this.isTemporary = false,
     this.onResultDeleted,
+    this.onResultUpdated,
   });
 
+  @override
+  State<ResultDetailPage> createState() => _ResultDetailPageState();
+}
+
+class _ResultDetailPageState extends State<ResultDetailPage> {
+  late FGSResult _currentResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentResult = widget.result;
+  }
 
 
-  void _navigateToEdit(BuildContext context) {
-    // TODO: Navigate to edit page
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('TODO: Edit result page')),
+
+  Future<void> _refreshResult() async {
+    if (_currentResult.id != null) {
+      try {
+        final dbService = DatabaseService();
+        final updatedResult = await dbService.getResult(_currentResult.id!);
+        if (updatedResult != null && mounted) {
+          setState(() {
+            _currentResult = updatedResult;
+          });
+        }
+      } catch (e) {
+        // Ignore refresh errors
+      }
+    }
+  }
+
+  void _navigateToEdit(BuildContext context) async {
+    final editedResult = await Navigator.push<FGSResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditResultPage(
+          result: _currentResult,
+          isTemporary: widget.isTemporary,
+        ),
+      ),
     );
+
+    // Handle the edited result based on whether it's temporary or saved
+    if (editedResult != null) {
+      if (widget.isTemporary) {
+        // For temporary results, return the edited result to the caller
+        Navigator.of(context).pop(editedResult);
+      } else {
+        // For saved results, refresh the data
+        await _refreshResult();
+        widget.onResultUpdated?.call();
+      }
+    }
   }
 
   void _navigateToComparison(BuildContext context, String facialRegion) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ComparisonPage(result: result, region: facialRegion),
+        builder: (context) => ComparisonPage(result: _currentResult, region: facialRegion),
       ),
     );
   }
@@ -59,7 +110,7 @@ class ResultDetailPage extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      if (result.id == null) {
+      if (_currentResult.id == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Cannot delete result without ID')),
         );
@@ -69,13 +120,13 @@ class ResultDetailPage extends StatelessWidget {
       try {
         // Delete from database
         final dbService = DatabaseService();
-        await dbService.deleteResult(result.id!);
+        await dbService.deleteResult(_currentResult.id!);
 
         // Delete associated image files
-        await FileService.deleteResultImages(result);
+        await FileService.deleteResultImages(_currentResult);
 
         // Notify parent to refresh the list
-        onResultDeleted?.call();
+        widget.onResultDeleted?.call();
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +226,7 @@ class ResultDetailPage extends StatelessWidget {
         backgroundColor: lightBlue,
         centerTitle: true,
         title: Text(
-          result.catName,
+          _currentResult.catName,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -202,7 +253,7 @@ class ResultDetailPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ImageViewerPage(imagePath: result.originalImagePath),
+                    builder: (context) => ImageViewerPage(imagePath: _currentResult.originalImagePath),
                   ),
                 );
               },
@@ -216,7 +267,7 @@ class ResultDetailPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.file(
-                    File(result.originalImagePath),
+                    File(_currentResult.originalImagePath),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
@@ -234,8 +285,8 @@ class ResultDetailPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: getScoreColor(result.totalFgsScore).withValues(alpha: 0.2),
-                border: Border.all(color: getScoreColor(result.totalFgsScore), width: 2),
+                color: getScoreColor(_currentResult.totalFgsScore).withValues(alpha: 0.2),
+                border: Border.all(color: getScoreColor(_currentResult.totalFgsScore), width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -250,7 +301,7 @@ class ResultDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '${result.totalFgsScore} / 10',
+                    '${_currentResult.totalFgsScore} / 10',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -284,30 +335,30 @@ class ResultDetailPage extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Ear
-                  _buildFauItem(context, 'Ear', result.earImagePath ?? '', result.earScore),
+                  _buildFauItem(context, 'Ear', _currentResult.earImagePath ?? '', _currentResult.earScore),
                   const SizedBox(height: 8),
 
                   // Eyes
-                  _buildFauItem(context, 'Eyes', result.eyesImagePath ?? '', result.eyesScore),
+                  _buildFauItem(context, 'Eyes', _currentResult.eyesImagePath ?? '', _currentResult.eyesScore),
                   const SizedBox(height: 8),
 
                   // Muzzle
-                  _buildFauItem(context, 'Muzzle', result.muzzleImagePath ?? '', result.muzzleScore),
+                  _buildFauItem(context, 'Muzzle', _currentResult.muzzleImagePath ?? '', _currentResult.muzzleScore),
                   const SizedBox(height: 8),
 
                   // Whiskers
-                  _buildFauItem(context, 'Whiskers', result.whiskersImagePath ?? '', result.whiskersScore),
+                  _buildFauItem(context, 'Whiskers', _currentResult.whiskersImagePath ?? '', _currentResult.whiskersScore),
                   const SizedBox(height: 8),
 
                   // Head Position
-                  _buildFauItem(context, 'Head Position', result.headPositionImagePath ?? '', result.headPositionScore),
+                  _buildFauItem(context, 'Head Position', _currentResult.headPositionImagePath ?? '', _currentResult.headPositionScore),
                 ],
               ),
             ),
             const SizedBox(height: 30),
 
             // Action button (Delete for history view)
-            if (showDeleteButton)
+            if (widget.showDeleteButton)
               ElevatedButton.icon(
                 onPressed: () => _deleteResult(context),
                 icon: const Icon(Icons.delete, color: Colors.white),

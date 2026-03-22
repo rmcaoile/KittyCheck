@@ -149,6 +149,7 @@ class _HistoryPageState extends State<HistoryPage> {
         builder: (context) => SavedResultPage(
           result: result,
           onResultDeleted: _loadResults, // Refresh list after deletion
+          onResultUpdated: _loadResults, // Refresh list after update
         ),
       ),
     );
