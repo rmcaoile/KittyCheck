@@ -42,7 +42,7 @@ dependencies:
   path: ^1.8.3
 
   # ML dependencies for AI scoring
-  tflite_flutter: ^0.11.0
+  tflite_flutter: ^0.12.1
   image: ^4.1.3
   shared_preferences: ^2.2.0
 
@@ -72,6 +72,7 @@ flutter:
   assets:
     - assets/images/cat_logo.png
     - assets/images/cat_sample.png
+    - assets/images/test_sample.png
     - assets/fgs_manual/
     # TFLite models for AI scoring
     - assets/models/face_detector.tflite

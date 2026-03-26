@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:image/image.dart' as img;
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:cat_pain_detector/models/fgs_result.dart';
 
 /// Service for AI-based FGS scoring using TFLite models
 class AIScoringService {
-  // Model interpreters
+  // TFLite interpreters for each model
   Interpreter? _faceDetector;
   Interpreter? _regionDetector;
   Interpreter? _earsScorer;
@@ -37,290 +39,18 @@ class AIScoringService {
 
       _isInitialized = true;
     } catch (e) {
-      throw Exception('Failed to initialize AI models: $e');
+      dispose();
+      rethrow;
     }
   }
 
-  /// Load a TFLite model from assets
-  Future<Interpreter> _loadModel(String modelPath) async {
-    try {
-      final interpreterOptions = InterpreterOptions();
-      return await Interpreter.fromAsset(modelPath, options: interpreterOptions);
-    } catch (e) {
-      throw Exception('Failed to load model $modelPath: $e');
-    }
+  Future<Interpreter> _loadModel(String assetPath) async {
+    final interpreterOptions = InterpreterOptions();
+    final interpreter = await Interpreter.fromAsset(assetPath, options: interpreterOptions);
+    interpreter.allocateTensors();
+    return interpreter;
   }
 
-  /// Score image using AI models
-  Future<Map<String, dynamic>> scoreImage(String imagePath) async {
-    if (!_isInitialized) {
-      throw Exception('AI models not initialized. Call initialize() first.');
-    }
-
-    try {
-      // Load and preprocess image
-      final imageBytes = await File(imagePath).readAsBytes();
-      final processedImage = await _preprocessImage(imageBytes);
-
-      // Step 1: Face detection
-      final faceRect = await _detectFace(processedImage);
-      if (faceRect == null) {
-        throw Exception('No cat face detected in image');
-      }
-
-      // Step 2: Region detection
-      final landmarks = await _detectLandmarks(processedImage);
-      if (landmarks.isEmpty) {
-        throw Exception('Could not identify facial features');
-      }
-
-      // Step 3: Crop regions
-      final regions = await _cropRegions(processedImage, faceRect, landmarks);
-
-      // Step 4: Score each region
-      final scores = <String, int>{};
-      final croppedImages = <String, Uint8List>{};
-
-      scores['ears'] = await _scoreRegion(regions['ears']!, _earsScorer!);
-      scores['eyes'] = await _scoreRegion(regions['eyes']!, _eyesScorer!);
-      scores['muzzle'] = await _scoreRegion(regions['muzzle']!, _muzzleScorer!);
-      scores['whiskers'] = await _scoreRegion(regions['whiskers']!, _whiskersScorer!);
-      scores['head'] = await _scoreRegion(regions['head']!, _headScorer!);
-
-      // Store cropped images
-      croppedImages['ears'] = regions['ears']!;
-      croppedImages['eyes'] = regions['eyes']!;
-      croppedImages['muzzle'] = regions['muzzle']!;
-      croppedImages['whiskers'] = regions['whiskers']!;
-      croppedImages['head'] = regions['head']!;
-
-      return {
-        'scores': scores,
-        'croppedImages': croppedImages,
-      };
-    } catch (e) {
-      throw Exception('AI scoring failed: $e');
-    }
-  }
-
-  /// Preprocess image for model input
-  Future<Uint8List> _preprocessImage(Uint8List imageBytes) async {
-    final image = img.decodeImage(imageBytes);
-    if (image == null) throw Exception('Invalid image format');
-
-    // Resize to 224x224 (model input size)
-    final resized = img.copyResize(image, width: 224, height: 224);
-
-    // Convert to RGB if needed
-    final rgbImage = resized.convert(numChannels: 3);
-
-    return Uint8List.fromList(img.encodeJpg(rgbImage));
-  }
-
-  /// Detect cat face in image
-  Future<Rect?> _detectFace(Uint8List imageBytes) async {
-    if (_faceDetector == null) return null;
-
-    // Prepare input tensor
-    final inputShape = _faceDetector!.getInputTensors().first.shape;
-    final input = _prepareImageTensor(imageBytes, inputShape);
-
-    // Run inference
-    final output = _faceDetector!.getOutputTensors().first;
-    _faceDetector!.run(input, output);
-
-    // Parse output (assuming normalized bbox: x1, y1, x2, y2)
-    final bbox = output.data as List<double>;
-    if (bbox.length != 4) return null;
-
-    return Rect.fromLTRB(bbox[0], bbox[1], bbox[2], bbox[3]);
-  }
-
-  /// Detect facial landmarks
-  Future<Map<String, Point>> _detectLandmarks(Uint8List imageBytes) async {
-    if (_regionDetector == null) return {};
-
-    // Prepare input tensor
-    final inputShape = _regionDetector!.getInputTensors().first.shape;
-    final input = _prepareImageTensor(imageBytes, inputShape);
-
-    // Run inference
-    final output = _regionDetector!.getOutputTensors().first;
-    _regionDetector!.run(input, output);
-
-    // Parse output (assuming 5 points: left_eye, right_eye, nose, left_ear, right_ear)
-    final coords = output.data as List<double>;
-    if (coords.length != 10) return {}; // 5 points × 2 coords
-
-    return {
-      'left_eye': Point(coords[0], coords[1]),
-      'right_eye': Point(coords[2], coords[3]),
-      'nose': Point(coords[4], coords[5]),
-      'left_ear': Point(coords[6], coords[7]),
-      'right_ear': Point(coords[8], coords[9]),
-    };
-  }
-
-  /// Crop facial regions
-  Future<Map<String, Uint8List>> _cropRegions(
-    Uint8List imageBytes,
-    Rect faceRect,
-    Map<String, Point> landmarks,
-  ) async {
-    final image = img.decodeImage(imageBytes);
-    if (image == null) throw Exception('Invalid image');
-
-    final regions = <String, Uint8List>{};
-
-    // Crop ears region
-    regions['ears'] = _cropEarsRegion(image, landmarks);
-
-    // Crop eyes region
-    regions['eyes'] = _cropEyesRegion(image, landmarks);
-
-    // Crop muzzle region
-    regions['muzzle'] = _cropMuzzleRegion(image, landmarks);
-
-    // Crop whiskers region
-    regions['whiskers'] = _cropWhiskersRegion(image, landmarks);
-
-    // Crop head region
-    regions['head'] = _cropHeadRegion(image, faceRect);
-
-    return regions;
-  }
-
-  /// Score individual region
-  Future<int> _scoreRegion(Uint8List regionBytes, Interpreter scorer) async {
-    // Prepare input tensor
-    final inputShape = scorer.getInputTensors().first.shape;
-    final input = _prepareImageTensor(regionBytes, inputShape);
-
-    // Run inference
-    final output = scorer.getOutputTensors().first;
-    scorer.run(input, output);
-
-    // Parse output (assuming 3-class classification: 0, 1, 2)
-    final scores = output.data as List<double>;
-    if (scores.length != 3) throw Exception('Invalid scorer output');
-
-    // Return class with highest probability
-    int maxIndex = 0;
-    double maxScore = scores[0];
-    for (int i = 1; i < scores.length; i++) {
-      if (scores[i] > maxScore) {
-        maxScore = scores[i];
-        maxIndex = i;
-      }
-    }
-
-    return maxIndex;
-  }
-
-  /// Prepare image tensor for model input
-  List<List<List<List<double>>>> _prepareImageTensor(Uint8List imageBytes, List<int> inputShape) {
-    final image = img.decodeImage(imageBytes);
-    if (image == null) throw Exception('Invalid image');
-
-    // Resize to model input size
-    final resized = img.copyResize(image, width: inputShape[2], height: inputShape[1]);
-
-    // Convert to RGB if needed
-    final rgbImage = resized.convert(numChannels: 3);
-
-    // Normalize to [0, 1] and convert to tensor format [1, H, W, C]
-    final tensor = List.generate(
-      1, // batch size
-      (b) => List.generate(
-        inputShape[1], // height
-        (h) => List.generate(
-          inputShape[2], // width
-          (w) {
-            final pixel = rgbImage.getPixel(w, h);
-            return [
-              pixel.r / 255.0, // R
-              pixel.g / 255.0, // G
-              pixel.b / 255.0, // B
-            ];
-          },
-        ),
-      ),
-    );
-
-    return tensor;
-  }
-
-  /// Crop ears region
-  Uint8List _cropEarsRegion(img.Image image, Map<String, Point> landmarks) {
-    final leftEar = landmarks['left_ear']!;
-    final rightEar = landmarks['right_ear']!;
-
-    final xMin = (leftEar.x - 45).clamp(0, image.width - 1).toInt();
-    final xMax = (rightEar.x + 45).clamp(0, image.width - 1).toInt();
-    final yMin = (leftEar.y - 70).clamp(0, image.height - 1).toInt();
-    final yMax = (rightEar.y + 40).clamp(0, image.height - 1).toInt();
-
-    final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-    final resized = img.copyResize(cropped, width: 224, height: 150);
-    return Uint8List.fromList(img.encodeJpg(resized));
-  }
-
-  /// Crop eyes region
-  Uint8List _cropEyesRegion(img.Image image, Map<String, Point> landmarks) {
-    final leftEye = landmarks['left_eye']!;
-    final rightEye = landmarks['right_eye']!;
-
-    final xMin = (leftEye.x - 35).clamp(0, image.width - 1).toInt();
-    final xMax = (rightEye.x + 35).clamp(0, image.width - 1).toInt();
-    final yMin = (leftEye.y - 25).clamp(0, image.height - 1).toInt();
-    final yMax = (rightEye.y + 25).clamp(0, image.height - 1).toInt();
-
-    final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-    final resized = img.copyResize(cropped, width: 224, height: 150);
-    return Uint8List.fromList(img.encodeJpg(resized));
-  }
-
-  /// Crop muzzle region
-  Uint8List _cropMuzzleRegion(img.Image image, Map<String, Point> landmarks) {
-    final nose = landmarks['nose']!;
-
-    final xMin = 0;
-    final xMax = image.width - 1;
-    final yMin = (nose.y - 40).clamp(0, image.height - 1).toInt();
-    final yMax = (nose.y + 90).clamp(0, image.height - 1).toInt();
-
-    final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-    final resized = img.copyResize(cropped, width: 224, height: 180);
-    return Uint8List.fromList(img.encodeJpg(resized));
-  }
-
-  /// Crop whiskers region
-  Uint8List _cropWhiskersRegion(img.Image image, Map<String, Point> landmarks) {
-    final nose = landmarks['nose']!;
-
-    final xMin = (nose.x - 50).clamp(0, image.width - 1).toInt();
-    final xMax = (nose.x + 50).clamp(0, image.width - 1).toInt();
-    final yMin = (nose.y - 20).clamp(0, image.height - 1).toInt();
-    final yMax = (nose.y + 80).clamp(0, image.height - 1).toInt();
-
-    final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-    final resized = img.copyResize(cropped, width: 224, height: 150);
-    return Uint8List.fromList(img.encodeJpg(resized));
-  }
-
-  /// Crop head region
-  Uint8List _cropHeadRegion(img.Image image, Rect faceRect) {
-    final xMin = faceRect.left.toInt().clamp(0, image.width - 1);
-    final yMin = faceRect.top.toInt().clamp(0, image.height - 1);
-    final width = faceRect.width.toInt().clamp(1, image.width - xMin);
-    final height = faceRect.height.toInt().clamp(1, image.height - yMin);
-
-    final cropped = img.copyCrop(image, x: xMin, y: yMin, width: width, height: height);
-    final resized = img.copyResize(cropped, width: 224, height: 224);
-    return Uint8List.fromList(img.encodeJpg(resized));
-  }
-
-  /// Dispose of model interpreters
   void dispose() {
     _faceDetector?.close();
     _regionDetector?.close();
@@ -340,25 +70,554 @@ class AIScoringService {
 
     _isInitialized = false;
   }
-}
 
-/// Simple Point class
-class Point {
-  final double x;
-  final double y;
+  /// Main scoring method for test pipeline
+  /// Returns {'scores': Map<String, int>, 'croppedImages': Map<String, Uint8List>}
+  Future<Map<String, dynamic>> scoreImage(String imagePath) async {
+    if (!_isInitialized) {
+      throw Exception('AIScoringService not initialized. Call initialize() first.');
+    }
 
-  Point(this.x, this.y);
-}
+    final image = img.decodeImage(File(imagePath).readAsBytesSync());
+    if (image == null) {
+      throw Exception('Failed to decode image');
+    }
 
-/// Simple Rect class
-class Rect {
-  final double left;
-  final double top;
-  final double right;
-  final double bottom;
+    return await _runScoringPipeline(image);
+  }
 
-  Rect.fromLTRB(this.left, this.top, this.right, this.bottom);
+  /// Production method that returns FGSResult for the main app
+  Future<FGSResult> scoreImageForResult(String imagePath, String catName) async {
+    final result = await scoreImage(imagePath);
+    final scores = result['scores'] as Map<String, int>;
 
-  double get width => right - left;
-  double get height => bottom - top;
+    return FGSResult(
+      catName: catName,
+      dateTime: DateTime.now(),
+      totalFgsScore: scores.values.reduce((a, b) => a + b),
+      earScore: scores['ears'] ?? 0,
+      eyesScore: scores['eyes'] ?? 0,
+      muzzleScore: scores['muzzle'] ?? 0,
+      whiskersScore: scores['whiskers'] ?? 0,
+      headPositionScore: scores['head'] ?? 0,
+      originalImagePath: imagePath,
+    );
+  }
+
+  /// Run the complete scoring pipeline
+  Future<Map<String, dynamic>> _runScoringPipeline(img.Image originalImage) async {
+    final faceBbox = await _detectFace(originalImage);
+
+    final landmarks = await _loadLandmarksIfAvailable();
+    final expandedBbox = _expandBbox(faceBbox, originalImage.width, originalImage.height, landmarks: landmarks);
+    final croppedFace = _cropImage(originalImage, expandedBbox);
+
+    final croppedFaceResized = img.copyResize(croppedFace, width: 224, height: 224);
+
+    final regionCenters = await _detectRegions(croppedFaceResized);
+    final rotationAngle = _calculateRotationAngle(regionCenters);
+
+    final rotatedData = _rotateFace(croppedFaceResized, regionCenters, rotationAngle);
+    final rotatedFace = rotatedData['image'] as img.Image;
+    final rotatedCenters = rotatedData['centers'] as Map<String, List<double>>;
+
+    final rotatedLandmarksImage = _createLandmarksImage(rotatedFace, rotatedCenters);
+
+    final croppedRegions = _cropRegions(rotatedFace, rotatedCenters);
+    final scores = await _scoreRegions(croppedRegions);
+
+    final headImage = _prepareHeadImage(originalImage, faceBbox);
+    final landmarksImage = _createLandmarksImage(croppedFaceResized, regionCenters);
+
+    croppedRegions['head'] = headImage;
+    croppedRegions['cropped_face'] = croppedFaceResized;
+    croppedRegions['landmarks_face'] = landmarksImage;
+    croppedRegions['rotated_face'] = rotatedFace;
+    croppedRegions['rotated_face_with_landmarks'] = rotatedLandmarksImage;
+
+    final croppedImages = <String, Uint8List>{};
+    for (final entry in croppedRegions.entries) {
+      croppedImages[entry.key] = Uint8List.fromList(img.encodeJpg(entry.value as img.Image));
+    }
+
+    return {
+      'scores': scores,
+      'croppedImages': croppedImages,
+    };
+  }
+
+  /// Detect face using TFLite model
+  Future<List<int>> _detectFace(img.Image image) async {
+    if (_faceDetector == null) {
+      throw Exception('Face detector not loaded');
+    }
+
+    final resizedImage = _resizeWithPadding(image, 224, 224);
+    final inputData = _prepareImageForInference(resizedImage, normalize: false);
+    final outputData = _runInference(_faceDetector!, inputData);
+
+    // Output is [x1, y1, x2, y2] normalized coordinates
+    final predBboxNorm = outputData.first;
+
+    // Convert normalized coordinates to pixel coordinates
+    final x1 = (predBboxNorm[0] * image.width).round();
+    final y1 = (predBboxNorm[1] * image.height).round();
+    final x2 = (predBboxNorm[2] * image.width).round();
+    final y2 = (predBboxNorm[3] * image.height).round();
+
+    // Clamp to image bounds
+    final clampedX1 = math.max(0, x1);
+    final clampedY1 = math.max(0, y1);
+    final clampedX2 = math.min(image.width, x2);
+    final clampedY2 = math.min(image.height, y2);
+
+    final faceBbox = [clampedX1, clampedY1, clampedX2, clampedY2];
+
+    return faceBbox;
+  }
+
+  List<int> _expandBbox(List<int> bbox, int imgWidth, int imgHeight, {List<List<double>>? landmarks}) {
+    var x1 = bbox[0], y1 = bbox[1], x2 = bbox[2], y2 = bbox[3];
+
+    // Include landmarks in bbox if available
+    if (landmarks != null && landmarks.isNotEmpty) {
+      final landmarksArray = landmarks;
+      double minX = double.infinity;
+      double maxX = double.negativeInfinity;
+      double minY = double.infinity;
+      double maxY = double.negativeInfinity;
+
+      for (final landmark in landmarksArray) {
+        minX = math.min(minX, landmark[0]);
+        maxX = math.max(maxX, landmark[0]);
+        minY = math.min(minY, landmark[1]);
+        maxY = math.max(maxY, landmark[1]);
+      }
+
+      x1 = math.min(x1, minX.round());
+      y1 = math.min(y1, minY.round());
+      x2 = math.max(x2, maxX.round());
+      y2 = math.max(y2, maxY.round());
+    }
+
+    final bw = x2 - x1;
+    final bh = y2 - y1;
+    final dx = (bw * 0.15).round();
+    final dy = (bh * 0.15).round();
+    final topMarginExtra = (bh * 0.20).round();
+
+    final expandedX1 = math.max(0, x1 - dx);
+    final expandedY1 = math.max(0, y1 - dy - topMarginExtra);
+    final expandedX2 = math.min(imgWidth, x2 + dx);
+    final expandedY2 = math.min(imgHeight, y2 + dy);
+
+    return [expandedX1, expandedY1, expandedX2, expandedY2];
+  }
+
+  img.Image _cropImage(img.Image image, List<int> bbox) {
+    final x1 = bbox[0], y1 = bbox[1], x2 = bbox[2], y2 = bbox[3];
+    final width = x2 - x1;
+    final height = y2 - y1;
+
+    if (width <= 0 || height <= 0) {
+      throw Exception('Invalid bbox for cropping');
+    }
+    return img.copyCrop(image, x: x1, y: y1, width: width, height: height);
+  }
+
+  Future<Map<String, List<double>>> _detectRegions(img.Image image) async {
+    if (_regionDetector == null) {
+      throw Exception('Region detector not loaded');
+    }
+
+    final resizedImage = img.copyResize(image, width: 224, height: 224);
+    final inputData = _prepareImageForInference(resizedImage, normalize: false);
+    final outputData = _runInference(_regionDetector!, inputData);
+
+    // Output is 10 values: [x1,y1,x2,y2,x3,y3,x4,y4,x5,y5] for 5 regions
+    final predCoords = outputData.first as List<double>;
+
+    final regionOrder = ["left_eye", "right_eye", "nose", "left_ear", "right_ear"];
+    final regionCenters = <String, List<double>>{};
+
+    for (int i = 0; i < regionOrder.length; i++) {
+      final xNorm = predCoords[i * 2];
+      final yNorm = predCoords[i * 2 + 1];
+
+      final x = math.max(0.0, math.min(224.0, xNorm * 224));
+      final y = math.max(0.0, math.min(224.0, yNorm * 224));
+
+      regionCenters[regionOrder[i]] = [x, y];
+    }
+
+    final leftEarY = regionCenters['left_ear']![1];
+    final rightEarY = regionCenters['right_ear']![1];
+    final leftEyeY = regionCenters['left_eye']![1];
+    final rightEyeY = regionCenters['right_eye']![1];
+    final noseY = regionCenters['nose']![1];
+
+    final avgEarY = (leftEarY + rightEarY) / 2;
+    final avgEyeY = (leftEyeY + rightEyeY) / 2;
+
+    if (noseY < avgEyeY) {
+      for (final key in regionCenters.keys) {
+        final center = regionCenters[key]!;
+        regionCenters[key] = [center[0], 224.0 - center[1]];
+      }
+    }
+
+    return regionCenters;
+  }
+
+  double _calculateRotationAngle(Map<String, List<double>> regionCenters) {
+    final leftEye = regionCenters['left_eye'];
+    final rightEye = regionCenters['right_eye'];
+
+    if (leftEye == null || rightEye == null) return 0.0;
+
+    final eyeVector = [rightEye[0] - leftEye[0], rightEye[1] - leftEye[1]];
+
+    const earAlignmentTolerance = 0.02;
+    if (eyeVector[0].abs() > 1e-6) {
+      final horizontalRatio = eyeVector[1].abs() / (eyeVector[0].abs() + 1e-6);
+      if (horizontalRatio < earAlignmentTolerance) {
+        return 0.0;
+      }
+    }
+
+    final angleRad = math.atan2(eyeVector[1], eyeVector[0]);
+    final angleDeg = -angleRad * 180.0 / math.pi;
+
+    const minAngleThreshold = 5.0;
+    if (angleDeg.abs() < minAngleThreshold) {
+      return 0.0;
+    }
+
+    return math.max(-30.0, math.min(30.0, angleDeg));
+  }
+
+  Map<String, dynamic> _rotateFace(img.Image image, Map<String, List<double>> centers, double angle) {
+    if (angle.abs() < 0.1) {
+      return {'image': image, 'centers': centers};
+    }
+
+    final nose = centers['nose'];
+    if (nose == null) return {'image': image, 'centers': centers};
+
+    final centerX = nose[0];
+    final centerY = nose[1];
+
+    final cosA = math.cos(angle * math.pi / 180.0);
+    final sinA = math.sin(angle * math.pi / 180.0);
+
+    final h = image.height.toDouble();
+    final w = image.width.toDouble();
+    final absCosA = cosA.abs();
+    final absSinA = sinA.abs();
+    final newW = ((h * absSinA) + (w * absCosA)).round();
+    final newH = ((h * absCosA) + (w * absSinA)).round();
+
+    final rotatedImage = img.Image(width: newW, height: newH);
+    
+    for (int y = 0; y < newH; y++) {
+      for (int x = 0; x < newW; x++) {
+        final dx = x - newW / 2;
+        final dy = y - newH / 2;
+
+        final srcX =  cosA * dx + sinA * dy + centerX;
+        final srcY = -sinA * dx + cosA * dy + centerY;
+
+        final srcXInt = srcX.floor();
+        final srcYInt = srcY.floor();
+        final srcXFrac = srcX - srcXInt;
+        final srcYFrac = srcY - srcYInt;
+
+        if (srcXInt >= 0 && srcXInt < image.width - 1 &&
+            srcYInt >= 0 && srcYInt < image.height - 1) {
+          final p00 = image.getPixel(srcXInt, srcYInt);
+          final p10 = image.getPixel(srcXInt + 1, srcYInt);
+          final p01 = image.getPixel(srcXInt, srcYInt + 1);
+          final p11 = image.getPixel(srcXInt + 1, srcYInt + 1);
+
+          final r = _lerp(_lerp(p00.r.toDouble(), p10.r.toDouble(), srcXFrac), _lerp(p01.r.toDouble(), p11.r.toDouble(), srcXFrac), srcYFrac);
+          final g = _lerp(_lerp(p00.g.toDouble(), p10.g.toDouble(), srcXFrac), _lerp(p01.g.toDouble(), p11.g.toDouble(), srcXFrac), srcYFrac);
+          final b = _lerp(_lerp(p00.b.toDouble(), p10.b.toDouble(), srcXFrac), _lerp(p01.b.toDouble(), p11.b.toDouble(), srcXFrac), srcYFrac);
+
+          rotatedImage.setPixel(x, y, img.ColorRgb8(r.round(), g.round(), b.round()));
+        } else {
+          rotatedImage.setPixel(x, y, img.ColorRgb8(0, 0, 0));
+        }
+      }
+    }
+
+    final rotatedCenters = <String, List<double>>{};
+    for (final entry in centers.entries) {
+      final name = entry.key;
+      final center = entry.value;
+
+      final lx = center[0];
+      final ly = center[1];
+
+      final dx = cosA * (lx - centerX) - sinA * (ly - centerY);
+      final dy = sinA * (lx - centerX) + cosA * (ly - centerY);
+
+      rotatedCenters[name] = [dx + newW / 2, dy + newH / 2];
+    }
+
+    return {'image': rotatedImage, 'centers': rotatedCenters};
+  }
+
+  /// Create image with landmark points marked
+  img.Image _createLandmarksImage(img.Image faceImage, Map<String, List<double>> regionCenters) {
+    final markedImage = img.Image.from(faceImage);
+
+    const int dotSize = 3;
+    final dotColor = img.ColorRgb8(255, 0, 0);
+
+    for (final entry in regionCenters.entries) {
+      final center = entry.value;
+      final x = center[0].round();
+      final y = center[1].round();
+
+      for (int dy = -dotSize; dy <= dotSize; dy++) {
+        for (int dx = -dotSize; dx <= dotSize; dx++) {
+          final drawX = x + dx;
+          final drawY = y + dy;
+
+          if (drawX >= 0 && drawX < markedImage.width &&
+              drawY >= 0 && drawY < markedImage.height) {
+            markedImage.setPixel(drawX, drawY, dotColor);
+          }
+        }
+      }
+    }
+
+    return markedImage;
+  }
+
+  double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+  Map<String, img.Image> _cropRegions(img.Image image, Map<String, List<double>> centers) {
+    final regions = <String, img.Image>{};
+
+    // Crop ears region
+    final leftEar = centers['left_ear'];
+    final rightEar = centers['right_ear'];
+    if (leftEar != null && rightEar != null) {
+      final xMin = math.max(0, (math.min(leftEar[0], rightEar[0]) - 45).round());
+      final xMax = math.min(image.width, (math.max(leftEar[0], rightEar[0]) + 45).round());
+      final yMin = math.max(0, (math.min(leftEar[1], rightEar[1]) - 70).round());
+      final yMax = math.min(image.height, (math.max(leftEar[1], rightEar[1]) + 40).round());
+
+      if (xMax > xMin && yMax > yMin) {
+        final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
+        regions['ears'] = img.copyResize(cropped, width: 224, height: 150);
+      }
+    }
+
+    // Crop eyes region
+    final leftEye = centers['left_eye'];
+    final rightEye = centers['right_eye'];
+    if (leftEye != null && rightEye != null) {
+      final xMin = math.max(0, (math.min(leftEye[0], rightEye[0]) - 35).round());
+      final xMax = math.min(image.width, (math.max(leftEye[0], rightEye[0]) + 35).round());
+      final yMin = math.max(0, (math.min(leftEye[1], rightEye[1]) - 25).round());
+      final yMax = math.min(image.height, (math.max(leftEye[1], rightEye[1]) + 25).round());
+
+      if (xMax > xMin && yMax > yMin) {
+        final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
+        regions['eyes'] = img.copyResize(cropped, width: 224, height: 150);
+      }
+    }
+
+    // Crop muzzle region
+    final nose = centers['nose'];
+    if (nose != null) {
+      final cx = nose[0];
+      final cy = nose[1];
+      final muzzleWidth = 120;
+      final xMin = math.max(0, (cx - muzzleWidth / 2).round());
+      final xMax = math.min(image.width, (cx + muzzleWidth / 2).round());
+      final yMin = math.max(0, (cy - 40).round());
+      final yMax = math.min(image.height, (cy + 90).round());
+
+      if (xMax > xMin && yMax > yMin) {
+        final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
+        regions['muzzle'] = _resizeWithPadding(cropped, 224, 224);
+      }
+    }
+
+    // Crop whiskers region
+    if (nose != null) {
+      final cx = nose[0];
+      final cy = nose[1];
+      final whiskersWidth = 140;
+      final xMin = math.max(0, (cx - whiskersWidth / 2).round());
+      final xMax = math.min(image.width, (cx + whiskersWidth / 2).round());
+      final yMin = math.max(0, (cy - 20).round());
+      final yMax = math.min(image.height, (cy + 80).round());
+
+      if (xMax > xMin && yMax > yMin) {
+        final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
+        regions['whiskers'] = _resizeWithPadding(cropped, 224, 224);
+      }
+    }
+
+    return regions;
+  }
+
+  Future<Map<String, int>> _scoreRegions(Map<String, img.Image> regions) async {
+    final scores = <String, int>{};
+
+    final regionModelMap = {
+      'ears': _earsScorer,
+      'eyes': _eyesScorer,
+      'muzzle': _muzzleScorer,
+      'whiskers': _whiskersScorer,
+      'head': _headScorer,
+    };
+
+    for (final regionName in ['ears', 'eyes', 'muzzle', 'whiskers', 'head']) {
+      final regionImage = regions[regionName];
+      final scorer = regionModelMap[regionName];
+
+      if (regionImage != null && scorer != null) {
+        final resizedImage = img.copyResizeCropSquare(regionImage, size: 224);
+        final inputData = _prepareImageForInference(resizedImage, normalize: true);
+        final outputData = _runInference(scorer, inputData);
+
+        final probabilities = outputData.first as List<double>;
+        final predictedClass = probabilities.indexOf(probabilities.reduce(math.max));
+        scores[regionName] = predictedClass;
+      } else {
+        scores[regionName] = 0;
+      }
+    }
+
+    return scores;
+  }
+
+  img.Image _prepareHeadImage(img.Image originalImage, List<int> faceBbox) {
+    final imageWithBox = img.Image.from(originalImage);
+    img.drawRect(imageWithBox,
+      x1: faceBbox[0], y1: faceBbox[1], x2: faceBbox[2], y2: faceBbox[3],
+      color: img.ColorRgb8(255, 0, 0), thickness: 3);
+
+    return _resizeWithPadding(imageWithBox, 224, 224);
+  }
+
+  /// Resize image with padding to maintain aspect ratio
+  img.Image _resizeWithPadding(img.Image image, int targetWidth, int targetHeight) {
+    final srcWidth = image.width;
+    final srcHeight = image.height;
+
+    final scale = math.min(targetWidth / srcWidth, targetHeight / srcHeight);
+    final newWidth = (srcWidth * scale).round();
+    final newHeight = (srcHeight * scale).round();
+
+    final resized = img.copyResize(image, width: newWidth, height: newHeight, interpolation: img.Interpolation.linear);
+    final result = img.Image(width: targetWidth, height: targetHeight);
+
+    final pasteX = ((targetWidth - newWidth) / 2).round();
+    final pasteY = ((targetHeight - newHeight) / 2).round();
+
+    for (int y = 0; y < newHeight; y++) {
+      for (int x = 0; x < newWidth; x++) {
+        final srcPixel = resized.getPixel(x, y);
+        result.setPixel(x + pasteX, y + pasteY, srcPixel);
+      }
+    }
+
+    return result;
+  }
+
+  /// Prepare image for TFLite inference (NCHW format)
+  List<List<List<List<double>>>> _prepareImageForInference(img.Image image, {bool normalize = true}) {
+    final rgbImage = image.numChannels == 4
+        ? img.copyResize(image, width: image.width, height: image.height)
+        : image;
+
+    final width = rgbImage.width;
+    final height = rgbImage.height;
+    final pixels = rgbImage.getBytes();
+    final bytesPerPixel = pixels.length ~/ (width * height);
+
+    final tensor = List.generate(1, (b) => List.generate(3, (c) {
+      if (c == 0) {
+        return List.generate(height, (y) => List.generate(width, (x) {
+          final idx = (y * width + x) * bytesPerPixel;
+          final r = (pixels[idx] as int).toDouble() / 255.0;
+          return normalize ? (r - 0.485) / 0.229 : r;
+        }));
+      } else if (c == 1) {
+        return List.generate(height, (y) => List.generate(width, (x) {
+          final idx = (y * width + x) * bytesPerPixel + 1;
+          final g = (pixels[idx] as int).toDouble() / 255.0;
+          return normalize ? (g - 0.456) / 0.224 : g;
+        }));
+      } else {
+        return List.generate(height, (y) => List.generate(width, (x) {
+          final idx = (y * width + x) * bytesPerPixel + 2;
+          final b = (pixels[idx] as int).toDouble() / 255.0;
+          return normalize ? (b - 0.406) / 0.225 : b;
+        }));
+      }
+    }));
+
+    return tensor;
+  }
+
+  Future<List<List<double>>?> _loadLandmarksIfAvailable() async {
+    try {
+      final landmarksPath = 'temp_folder_training_models_arch/sample/test_sample.json';
+      final file = File(landmarksPath);
+      if (!await file.exists()) return null;
+
+      final jsonString = await file.readAsString();
+      final jsonData = json.decode(jsonString) as Map<String, dynamic>;
+      final labelsRaw = jsonData['labels'];
+      if (labelsRaw is! List) return null;
+
+      final landmarks = <List<double>>[];
+      for (final label in labelsRaw) {
+        if (label is List) {
+          final landmark = <double>[];
+          for (final coord in label) {
+            landmark.add((coord as num).toDouble());
+          }
+          if (landmark.length >= 2) {
+            landmarks.add(landmark);
+          }
+        }
+      }
+
+      return landmarks.isNotEmpty ? landmarks : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Run inference with TFLite interpreter
+  List<dynamic> _runInference(Interpreter interpreter, List<List<List<List<double>>>> inputData) {
+    final outputShape = interpreter.getOutputTensors()[0].shape;
+
+    List output;
+    if (outputShape.length == 2 && outputShape[0] == 1) {
+      final featureSize = outputShape[1];
+      output = [List.filled(featureSize, 0.0)];
+    } else if (outputShape.length == 1) {
+      final featureSize = outputShape[0];
+      output = List.filled(featureSize, 0.0);
+    } else {
+      final outputSize = outputShape.reduce((a, b) => a * b);
+      output = List.filled(outputSize, 0.0);
+    }
+
+    interpreter.run(inputData, output);
+
+    if (output is List && output.isNotEmpty && output[0] is List) {
+      return [output[0]];
+    }
+    return [output];
+  }
 }

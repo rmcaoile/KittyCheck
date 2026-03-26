@@ -1,6 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/services/scoring_settings_service.dart';
+import 'package:cat_pain_detector/services/ai_scoring_service.dart';
+import 'package:cat_pain_detector/services/file_service.dart';
+import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 
 class ScoringSettingsPage extends StatefulWidget {
   const ScoringSettingsPage({super.key});
@@ -45,6 +51,157 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _runAIPipelineTest() async {
+    if (!mounted) return;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing AI Pipeline...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Initialize AI service
+      final aiService = AIScoringService();
+      await aiService.initialize();
+
+      // Load test image from assets
+      final imageData = await rootBundle.load('assets/images/test_sample.png');
+      final bytes = imageData.buffer.asUint8List();
+
+      // Save to temporary file
+      final tempDir = await FileService.getAppDirectory();
+      final tempImagePath = '$tempDir/test_sample_temp.png';
+      final tempFile = File(tempImagePath);
+      await tempFile.writeAsBytes(bytes);
+
+      // Run the test
+      final result = await aiService.scoreImage(tempImagePath);
+      final scores = result['scores'] as Map<String, int>;
+      final croppedImages = result['croppedImages'] as Map<String, Uint8List>;
+
+      // Save cropped images to app documents directory for comparison
+      final appDir = await FileService.getAppDirectory();
+      final debugDir = Directory('$appDir/debug_output');
+      if (!debugDir.existsSync()) {
+        debugDir.createSync(recursive: true);
+      }
+
+      final savedPaths = <String, String>{};
+      for (final entry in croppedImages.entries) {
+        final regionName = entry.key;
+        final imageData = entry.value;
+        final imagePath = '${debugDir.path}/${regionName}_crop.jpg';
+        File(imagePath).writeAsBytesSync(imageData);
+        savedPaths[regionName] = imagePath;
+      }
+
+      // Also save the intermediate cropped regions before scoring for comparison
+      final intermediateDir = Directory('$appDir/intermediate_crops');
+      if (!intermediateDir.existsSync()) {
+        intermediateDir.createSync(recursive: true);
+      }
+
+      // Calculate total score
+      final totalScore = scores.values.reduce((a, b) => a + b);
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Show results dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('AI Pipeline Test Results'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Test Image: test_sample.png'),
+                  const SizedBox(height: 16),
+                  const Text('Individual Scores:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...scores.entries.map((e) => Text('  ${e.key}: ${e.value}')),
+                  const SizedBox(height: 8),
+                  Text('Total FGS Score: $totalScore', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  const Text('Cropped Images Saved:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...savedPaths.entries.map((e) => Row(
+                    children: [
+                      Expanded(child: Text('  ${e.key}')),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ImageViewerPage(
+                                imagePath: e.value,
+                                isAsset: false,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('View'),
+                      ),
+                    ],
+                  )),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      aiService.dispose();
+
+    } catch (e, stackTrace) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Show error
+      if (mounted) {
+        _showErrorDialog('Test failed: $e\n\nStack trace: $stackTrace');
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Test Error'),
+        content: SingleChildScrollView(
+          child: Text(message),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -217,48 +374,39 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
               ),
             ),
 
-            const SizedBox(height: 40)
+            const SizedBox(height: 30),
 
-            // // Information Section
-            // Container(
-            //   padding: const EdgeInsets.all(16),
-            //   decoration: BoxDecoration(
-            //     color: Colors.blue.withValues(alpha: 0.1),
-            //     borderRadius: BorderRadius.circular(12),
-            //     border: Border.all(
-            //       color: Colors.blue,
-            //       width: 1,
-            //     ),
-            //   ),
-            //   // child: const Column(
-            //   //   crossAxisAlignment: CrossAxisAlignment.start,
-            //   //   children: [
-            //   //     Row(
-            //   //       children: [
-            //   //         Icon(Icons.info_outline, color: Colors.blue),
-            //   //         SizedBox(width: 8),
-            //   //         Text(
-            //   //           'About FGS Scoring',
-            //   //           style: TextStyle(
-            //   //             fontSize: 16,
-            //   //             fontWeight: FontWeight.bold,
-            //   //             color: Colors.blue,
-            //   //           ),
-            //   //         ),
-            //   //       ],
-            //   //     ),
-            //   //     SizedBox(height: 8),
-            //   //     // Text(
-            //   //     //   'FGS (Facial Grimace Scale) is a standardized method for assessing pain in cats by analyzing facial expressions. The AI models have been trained on a thousand of cat images to provide accurate pain assessments.',
-            //   //     //   style: TextStyle(
-            //   //     //     fontSize: 14,
-            //   //     //     color: Colors.black87,
-            //   //     //     height: 1.4,
-            //   //     //   ),
-            //   //     // ),
-            //   //   ],
-            //   // ),
-            // ),
+            // Test AI Pipeline Button
+            if (_useAIScoring) ...[
+              Container(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _runAIPipelineTest,
+                  icon: const Icon(Icons.science),
+                  label: const Text('Test AI Pipeline'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: darkBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Test the AI pipeline on the sample image and view cropped regions.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+
+            const SizedBox(height: 40)
           ],
         ),
       ),
