@@ -255,8 +255,13 @@ class _FGSResultPageState extends State<FGSResultPage> {
       final savedImagePath = await FileService.saveImage(File(widget.imagePath), originalFileName);
 
       // Create cropped image copies (dummy for now)
-      final tempResultId = DateTime.now().millisecondsSinceEpoch; // Temporary ID for file naming
-      final croppedPaths = await FileService.createCroppedImageCopies(savedImagePath, tempResultId);
+      final tempResultId =
+          DateTime.now().millisecondsSinceEpoch; // Temporary ID for file naming
+      final croppedPaths = await FileService.createCroppedImageCopies(
+        savedImagePath,
+        tempResultId,
+        croppedImagePaths: _tempCroppedImagePaths,
+      );
 
       // Create FGS result
       final finalCatName = catName.isEmpty ? 'Cat No. ${await dbService.getNextCatNumber()}' : catName;

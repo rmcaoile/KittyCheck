@@ -4,6 +4,9 @@ import 'package:path/path.dart' as path;
 import '../models/fgs_result.dart';
 
 class FileService {
+  /// TODO: toggle between cropped and placeholder images.
+  static bool saveCroppedImagesFromAI = true;
+
   static Future<String> getAppDirectory() async {
     final directory = await getApplicationDocumentsDirectory();
     final appDir = Directory(path.join(directory.path, 'cat_pain_detector'));
@@ -37,15 +40,30 @@ class FileService {
     }
   }
 
-  static Future<List<String>> createCroppedImageCopies(String originalPath, int resultId) async {
+  static Future<List<String>> createCroppedImageCopies(
+      String originalPath, int resultId,
+      {Map<String, String>? croppedImagePaths}) async {
     final List<String> imagePaths = [];
 
-    // TODO: for now, just create copies of the original image for each facial region
-    final regions = ['ear', 'eyes', 'muzzle', 'whiskers', 'head'];
+    final regionKeys = ['ears', 'eyes', 'muzzle', 'whiskers', 'head'];
+    final regionNames = ['ear', 'eyes', 'muzzle', 'whiskers', 'head'];
 
-    for (final region in regions) {
-      final fileName = '${resultId}_${region}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final copiedPath = await copyImage(originalPath, fileName);
+    for (int i = 0; i < regionKeys.length; i++) {
+      final regionKey = regionKeys[i];
+      final regionName = regionNames[i];
+      final fileName =
+          '${resultId}_${regionName}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      String sourcePath;
+      if (saveCroppedImagesFromAI &&
+          croppedImagePaths != null &&
+          croppedImagePaths.containsKey(regionKey)) {
+        sourcePath = croppedImagePaths[regionKey]!;
+      } else {
+        sourcePath = originalPath;
+      }
+
+      final copiedPath = await copyImage(sourcePath, fileName);
       imagePaths.add(copiedPath);
     }
 
