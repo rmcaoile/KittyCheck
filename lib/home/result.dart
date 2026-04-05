@@ -67,24 +67,20 @@ class _FGSResultPageState extends State<FGSResultPage> {
   }
 
   Future<void> _initializeScoring() async {
+    _useAIScoring = await _settingsService.getUseAIScoring();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Check if AI scoring is enabled
-      _useAIScoring = await _settingsService.getUseAIScoring();
-
       if (_useAIScoring) {
-        // AI scoring: perform full AI processing
         await _runAIScoring();
       } else {
-        // Random scoring: skip AI, just generate random scores with duplicate images
         await _runRandomScoring();
       }
     } catch (e) {
-      // If AI fails, show error (don't fall back to random)
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -456,15 +452,38 @@ class _FGSResultPageState extends State<FGSResultPage> {
 
             // Show loading indicator if AI is processing
             if (_isLoading)
-              Column(
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 10),
-                  Text(
-                    _useAIScoring ? 'Analyzing image with AI...' : 'Generating random scores...',
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(30),
+                  decoration: BoxDecoration(
+                    color: _useAIScoring
+                        ? Colors.green.withValues(alpha: 0.05)
+                        : Colors.orange.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _useAIScoring ? Colors.green : Colors.orange,
+                      width: 2,
+                    ),
                   ),
-                ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _useAIScoring
+                            ? 'Analyzing cat expression...'
+                            : 'Generating random scores...',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const SizedBox(height: 20),
+                      const CircularProgressIndicator(),
+                    ],
+                  ),
+                ),
               )
             // Show error message if AI failed
             else if (_errorMessage != null)
