@@ -181,62 +181,97 @@ class _FGSResultPageState extends State<FGSResultPage> {
   Future<void> _showSaveDialog() async {
     final TextEditingController nameController = TextEditingController();
     final dbService = DatabaseService();
-    // TODO: add name suggestion
-    // Get next number
-    int nextNumber = 1;
+
+    List<String> existingCatNames = [];
     try {
-      nextNumber = await dbService.getNextCatNumber();
+      existingCatNames = await dbService.getExistingCatNames();
     } catch (e) {
-      // Use default if error
+      // empty list if error
     }
-    nameController.text = 'Cat No. $nextNumber';
 
     if (!mounted) return;
+
+    String? validationError;
 
     return showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Save FGS Result'),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Cat Name',
-              hintText: 'Enter cat name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final catName = nameController.text.trim();
-                FocusScope.of(context).unfocus();
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Save FGS Result'),
+              content: Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return existingCatNames;
+                  }
+                  return existingCatNames.where((name) => name
+                      .toLowerCase()
+                      .contains(textEditingValue.text.toLowerCase()));
+                },
+                onSelected: (String selection) {
+                  nameController.text = selection;
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                  controller.text = nameController.text;
+                  controller.addListener(() {
+                    nameController.text = controller.text;
+                  });
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: InputDecoration(
+                      labelText: 'Cat Name',
+                      hintText: 'Enter or select cat name',
+                      errorText: validationError,
+                    ),
+                    onSubmitted: (_) => onFieldSubmitted(),
+                  );
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final catName = nameController.text.trim();
+                    FocusScope.of(context).unfocus();
 
-                try {
-                  await _saveResult(catName);
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Result saved successfully!')),
-                    );
-                    // Navigate to history tab
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    homePageKey.currentState?.switchToHistory();
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error saving result: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                    if (catName.isEmpty) {
+                      setState(() {
+                        validationError = 'Please enter a cat name';
+                      });
+                      return;
+                    }
+
+                    try {
+                      await _saveResult(catName);
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Result saved successfully!')),
+                        );
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
+                        homePageKey.currentState?.switchToHistory();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error saving result: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -260,9 +295,8 @@ class _FGSResultPageState extends State<FGSResultPage> {
       );
 
       // Create FGS result
-      final finalCatName = catName.isEmpty ? 'Cat No. ${await dbService.getNextCatNumber()}' : catName;
       final result = FGSResult(
-        catName: finalCatName,
+        catName: catName,
         dateTime: DateTime.now(),
         totalFgsScore: totalFgsScore,
         earScore: earScore,

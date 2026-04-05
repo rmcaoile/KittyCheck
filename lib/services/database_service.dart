@@ -65,6 +65,17 @@ class DatabaseService {
     });
   }
 
+  Future<List<String>> getExistingCatNames() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'fgs_results',
+      distinct: true,
+      columns: ['catName'],
+      orderBy: 'catName ASC',
+    );
+    return maps.map((row) => row['catName'] as String).toList();
+  }
+
   Future<FGSResult?> getResult(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
