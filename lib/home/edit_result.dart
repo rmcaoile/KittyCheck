@@ -218,12 +218,34 @@ class _EditResultPageState extends State<EditResultPage> {
   }
 
   Future<void> _navigateToFauEdit(String region) async {
+    int currentScore;
+    switch (region) {
+      case 'Ear':
+        currentScore = _earScore;
+        break;
+      case 'Eyes':
+        currentScore = _eyesScore;
+        break;
+      case 'Muzzle':
+        currentScore = _muzzleScore;
+        break;
+      case 'Whiskers':
+        currentScore = _whiskersScore;
+        break;
+      case 'Head Position':
+        currentScore = _headPositionScore;
+        break;
+      default:
+        currentScore = 0;
+    }
+
     final newScore = await Navigator.push<int>(
       context,
       MaterialPageRoute(
         builder: (context) => FauEditPage(
           result: widget.result,
           region: region,
+          currentScore: currentScore,
         ),
       ),
     );
@@ -254,122 +276,137 @@ class _EditResultPageState extends State<EditResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: lightBlue,
-        centerTitle: true,
-        title: const Text(
-          'Edit FGS Score',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: _discardChanges,
-        ),
-        actions: [
-          TextButton(
-            onPressed: _hasChanges ? _saveChanges : null,
-            style: TextButton.styleFrom(
-              foregroundColor: _hasChanges ? darkBlue : Colors.grey,
-            ),
-            child: const Text(
-              'Save',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+    return PopScope(
+      canPop: !_hasChanges,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          await _discardChanges();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: lightBlue,
+          centerTitle: true,
+          title: const Text(
+            'Edit FGS Score',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Image preview
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ImageViewerPage(imagePath: widget.result.originalImagePath),
-                  ),
-                );
-              },
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: lightBlue, width: 2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(widget.result.originalImagePath),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                      );
-                    },
-                  ),
-                ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _discardChanges,
+          ),
+          actions: [
+            TextButton(
+              onPressed: _hasChanges ? _saveChanges : null,
+              style: TextButton.styleFrom(
+                foregroundColor: _hasChanges ? darkBlue : Colors.grey,
+              ),
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Cat name input
-            TextField(
-              controller: _catNameController,
-              decoration: const InputDecoration(
-                labelText: 'Cat Name',
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: darkBlue, width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Individual scores
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey[300]!, width: 1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Facial Action Units',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Image preview
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ImageViewerPage(
+                          imagePath: widget.result.originalImagePath),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: lightBlue, width: 2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(widget.result.originalImagePath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image_not_supported,
+                              color: Colors.grey),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  _buildFauItem('Ear', widget.result.earImagePath ?? '', _earScore, () => _navigateToFauEdit('Ear')),
-                  const SizedBox(height: 8),
-
-                  _buildFauItem('Eyes', widget.result.eyesImagePath ?? '', _eyesScore, () => _navigateToFauEdit('Eyes')),
-                  const SizedBox(height: 8),
-
-                  _buildFauItem('Muzzle', widget.result.muzzleImagePath ?? '', _muzzleScore, () => _navigateToFauEdit('Muzzle')),
-                  const SizedBox(height: 8),
-
-                  _buildFauItem('Whiskers', widget.result.whiskersImagePath ?? '', _whiskersScore, () => _navigateToFauEdit('Whiskers')),
-                  const SizedBox(height: 8),
-
-                  _buildFauItem('Head Position', widget.result.headPositionImagePath ?? '', _headPositionScore, () => _navigateToFauEdit('Head Position')),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
 
-          ],
+              // Cat name input
+              TextField(
+                controller: _catNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Cat Name',
+                  border: OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: darkBlue, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // Individual scores
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey[300]!, width: 1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Facial Action Units',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFauItem('Ear', widget.result.earImagePath ?? '',
+                        _earScore, () => _navigateToFauEdit('Ear')),
+                    const SizedBox(height: 8),
+                    _buildFauItem('Eyes', widget.result.eyesImagePath ?? '',
+                        _eyesScore, () => _navigateToFauEdit('Eyes')),
+                    const SizedBox(height: 8),
+                    _buildFauItem('Muzzle', widget.result.muzzleImagePath ?? '',
+                        _muzzleScore, () => _navigateToFauEdit('Muzzle')),
+                    const SizedBox(height: 8),
+                    _buildFauItem(
+                        'Whiskers',
+                        widget.result.whiskersImagePath ?? '',
+                        _whiskersScore,
+                        () => _navigateToFauEdit('Whiskers')),
+                    const SizedBox(height: 8),
+                    _buildFauItem(
+                        'Head Position',
+                        widget.result.headPositionImagePath ?? '',
+                        _headPositionScore,
+                        () => _navigateToFauEdit('Head Position')),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

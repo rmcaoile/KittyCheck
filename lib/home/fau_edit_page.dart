@@ -7,11 +7,13 @@ import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 class FauEditPage extends StatefulWidget {
   final FGSResult result;
   final String region;
+  final int currentScore;
 
   const FauEditPage({
     super.key,
     required this.result,
     required this.region,
+    required this.currentScore,
   });
 
   @override
@@ -114,7 +116,7 @@ class _FauEditPageState extends State<FauEditPage> {
   @override
   void initState() {
     super.initState();
-    _currentScore = _getActualScore();
+    _currentScore = widget.currentScore;
     _selectedScore = _currentScore;
   }
 
@@ -162,191 +164,245 @@ class _FauEditPageState extends State<FauEditPage> {
     Navigator.of(context).pop(_selectedScore);
   }
 
+  Future<bool> _showDiscardDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes'),
+        content: const Text('Are you sure you want to discard your changes?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final subjectImagePath = _getSubjectImagePath();
     final referenceItems = referenceData[widget.region] ?? [];
     final hasChanges = _selectedScore != _currentScore;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: lightBlue,
-        centerTitle: true,
-        title: Text(
-          'Edit ${widget.region} Score',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.check,
-              color: hasChanges ? darkBlue : Colors.grey,
-            ),
-            onPressed: hasChanges ? _confirmSelection : null,
-            tooltip: 'Confirm selection',
+    return PopScope(
+      canPop: !hasChanges,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          if (_selectedScore != _currentScore) {
+            final confirmed = await _showDiscardDialog();
+            if (confirmed && context.mounted) {
+              Navigator.of(context).pop();
+            }
+          } else {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: lightBlue,
+          centerTitle: true,
+          title: Text(
+            'Edit ${widget.region} Score',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Subject's cropped image
-            GestureDetector(
-              onTap: () {
-                if (subjectImagePath != null && subjectImagePath.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ImageViewerPage(imagePath: subjectImagePath),
-                    ),
-                  );
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              if (_selectedScore != _currentScore) {
+                final confirmed = await _showDiscardDialog();
+                if (confirmed && context.mounted) {
+                  Navigator.of(context).pop();
                 }
-              },
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: lightBlue, width: 2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: subjectImagePath != null && subjectImagePath.isNotEmpty
-                      ? Image.file(
-                          File(subjectImagePath),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                        ),
-                ),
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.check,
+                color: hasChanges ? darkBlue : Colors.grey,
               ),
+              onPressed: hasChanges ? _confirmSelection : null,
+              tooltip: 'Confirm selection',
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Current Score: $_currentScore',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Reference scoring guide
-            ...referenceItems.map((item) {
-              final score = item['score'] as int;
-              final images = item['images'] as List<String>;
-              final description = item['description'] as String;
-              final isCurrentScore = score == _currentScore;
-              final isSelectedScore = score == _selectedScore;
-
-              return GestureDetector(
-                onTap: () => _onScoreSelected(score),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Subject's cropped image
+              GestureDetector(
+                onTap: () {
+                  if (subjectImagePath != null && subjectImagePath.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ImageViewerPage(imagePath: subjectImagePath),
+                      ),
+                    );
+                  }
+                },
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 30),
-                  padding: const EdgeInsets.all(16),
+                  width: 150,
+                  height: 150,
                   decoration: BoxDecoration(
-                    color: isSelectedScore ? lightBlue.withValues(alpha: 0.1) : Colors.white,
-                    border: Border.all(
-                      color: isSelectedScore ? lightBlue : Colors.grey[300]!,
-                      width: isSelectedScore ? 2 : 1,
-                    ),
+                    border: Border.all(color: lightBlue, width: 2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Score $score',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isSelectedScore ? darkBlue : Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Reference images
-                          if (images.length == 1)
-                            Center(
-                              child: Image.asset(
-                                images[0],
-                                height: 120,
-                                fit: BoxFit.contain,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child:
+                        subjectImagePath != null && subjectImagePath.isNotEmpty
+                            ? Image.file(
+                                File(subjectImagePath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: Colors.grey),
+                                  );
+                                },
+                              )
+                            : Container(
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image_not_supported,
+                                    color: Colors.grey),
                               ),
-                            )
-                          else
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: images.map((image) {
-                                return Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                                    child: Image.asset(
-                                      image,
-                                      height: 120,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-
-                          const SizedBox(height: 12),
-
-                          // Description
-                          Text(
-                            description,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Current score indicator (circle in upper right)
-                      if (isCurrentScore)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: darkBlue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                    ],
                   ),
                 ),
-              );
-            }),
-          ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Current Score: $_currentScore',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // Reference scoring guide
+              ...referenceItems.map((item) {
+                final score = item['score'] as int;
+                final images = item['images'] as List<String>;
+                final description = item['description'] as String;
+                final isCurrentScore = score == _currentScore;
+                final isSelectedScore = score == _selectedScore;
+
+                return GestureDetector(
+                  onTap: () => _onScoreSelected(score),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 30),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isSelectedScore
+                          ? lightBlue.withValues(alpha: 0.1)
+                          : Colors.white,
+                      border: Border.all(
+                        color: isSelectedScore ? lightBlue : Colors.grey[300]!,
+                        width: isSelectedScore ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Score $score',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isSelectedScore ? darkBlue : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Reference images
+                            if (images.length == 1)
+                              Center(
+                                child: Image.asset(
+                                  images[0],
+                                  height: 120,
+                                  fit: BoxFit.contain,
+                                ),
+                              )
+                            else
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: images.map((image) {
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: Image.asset(
+                                        image,
+                                        height: 120,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+
+                            const SizedBox(height: 12),
+
+                            // Description
+                            Text(
+                              description,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Current score indicator (circle in upper right)
+                        if (isCurrentScore)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: darkBlue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
