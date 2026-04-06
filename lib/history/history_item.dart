@@ -6,11 +6,19 @@ import 'package:cat_pain_detector/models/fgs_result.dart';
 class HistoryItem extends StatelessWidget {
   final FGSResult result;
   final VoidCallback onTap;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelectionChanged;
+  final VoidCallback? onLongPress;
 
   const HistoryItem({
     super.key,
     required this.result,
     required this.onTap,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
+    this.onLongPress,
   });
 
   String _formatDate(DateTime dateTime) {
@@ -34,12 +42,26 @@ class HistoryItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
       child: InkWell(
-        onTap: onTap,
+        onTap: isSelectionMode
+            ? () => onSelectionChanged?.call(!isSelected)
+            : onTap,
+        onLongPress: isSelectionMode ? null : onLongPress,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
+              // Checkbox in selection mode
+              if (isSelectionMode) ...[
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (value) =>
+                      onSelectionChanged?.call(value ?? false),
+                  activeColor: darkBlue,
+                ),
+                const SizedBox(width: 8),
+              ],
+
               // Thumbnail image
               Container(
                 width: 60,
@@ -102,12 +124,13 @@ class HistoryItem extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Arrow icon
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
+              // Arrow icon (hide if selection is on)
+              if (!isSelectionMode)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
             ],
           ),
         ),

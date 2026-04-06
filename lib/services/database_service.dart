@@ -109,6 +109,16 @@ class DatabaseService {
     );
   }
 
+  Future<int> deleteResults(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    final db = await database;
+    final placeholders = ids.map((_) => '?').join(', ');
+    return await db.rawDelete(
+      'DELETE FROM fgs_results WHERE id IN ($placeholders)',
+      ids,
+    );
+  }
+
   Future<List<FGSResult>> searchResults(String query) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
