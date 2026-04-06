@@ -5,6 +5,7 @@ import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
 import 'package:cat_pain_detector/home/fau_edit_page.dart';
+import 'package:cat_pain_detector/utils/string_utils.dart';
 
 class EditResultPage extends StatefulWidget {
   final FGSResult result;
@@ -149,7 +150,7 @@ class _EditResultPageState extends State<EditResultPage> {
   Future<void> _saveChanges() async {
     String? catName;
     if (!widget.isTemporary) {
-      catName = _catNameController.text.trim();
+      catName = capitalizeFirstLetter(_catNameController.text.trim());
       if (catName.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cat name cannot be empty')),

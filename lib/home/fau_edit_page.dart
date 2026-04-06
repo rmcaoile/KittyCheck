@@ -154,6 +154,128 @@ class _FauEditPageState extends State<FauEditPage> {
     }
   }
 
+  List<String> _buildImagePaths() {
+    final List<String> paths = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      paths.add(subjectPath);
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final img in images) {
+        paths.add(img);
+      }
+    }
+
+    return paths;
+  }
+
+  int _getStartIndex(String tappedImagePath) {
+    final subjectPath = _getSubjectImagePath();
+    if (subjectPath != null &&
+        subjectPath.isNotEmpty &&
+        subjectPath == tappedImagePath) {
+      return 0;
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    int offset = subjectPath != null && subjectPath.isNotEmpty ? 1 : 0;
+
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final img in images) {
+        if (img == tappedImagePath) {
+          return offset;
+        }
+        offset++;
+      }
+    }
+
+    return 0;
+  }
+
+  List<bool> _buildIsAssetList() {
+    final List<bool> isAssets = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      isAssets.add(false);
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final _ in images) {
+        isAssets.add(true);
+      }
+    }
+
+    return isAssets;
+  }
+
+  List<String> _buildLabels() {
+    final List<String> labels = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      labels.add("${widget.result.catName}'s ${widget.region}");
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final score = item['score'] as int;
+      final images = item['images'] as List<String>;
+      for (final _ in images) {
+        labels.add('Score $score');
+      }
+    }
+
+    return labels;
+  }
+
+  List<String> _buildDescriptions() {
+    final List<String> descriptions = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      descriptions.add('');
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      final description = item['description'] as String;
+      for (final _ in images) {
+        descriptions.add(description);
+      }
+    }
+
+    return descriptions;
+  }
+
+  void _onImageTap(String imagePath) {
+    final paths = _buildImagePaths();
+    final isAssets = _buildIsAssetList();
+    final labels = _buildLabels();
+    final descriptions = _buildDescriptions();
+    final startIndex = _getStartIndex(imagePath);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageViewerPage(
+          imagePaths: paths,
+          isAssetList: isAssets,
+          initialIndex: startIndex,
+          labels: labels,
+          descriptions: descriptions,
+        ),
+      ),
+    );
+  }
+
   void _onScoreSelected(int score) {
     setState(() {
       _selectedScore = score;
@@ -247,11 +369,21 @@ class _FauEditPageState extends State<FauEditPage> {
               GestureDetector(
                 onTap: () {
                   if (subjectImagePath != null && subjectImagePath.isNotEmpty) {
+                    final paths = _buildImagePaths();
+                    final isAssets = _buildIsAssetList();
+                    final labels = _buildLabels();
+                    final descriptions = _buildDescriptions();
+                    final startIndex = _getStartIndex(subjectImagePath);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            ImageViewerPage(imagePath: subjectImagePath),
+                        builder: (context) => ImageViewerPage(
+                          imagePaths: paths,
+                          isAssetList: isAssets,
+                          initialIndex: startIndex,
+                          labels: labels,
+                          descriptions: descriptions,
+                        ),
                       ),
                     );
                   }
@@ -338,11 +470,14 @@ class _FauEditPageState extends State<FauEditPage> {
 
                             // Reference images
                             if (images.length == 1)
-                              Center(
-                                child: Image.asset(
-                                  images[0],
-                                  height: 120,
-                                  fit: BoxFit.contain,
+                              GestureDetector(
+                                onTap: () => _onImageTap(images[0]),
+                                child: Center(
+                                  child: Image.asset(
+                                    images[0],
+                                    height: 120,
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               )
                             else
@@ -353,10 +488,13 @@ class _FauEditPageState extends State<FauEditPage> {
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 4),
-                                      child: Image.asset(
-                                        image,
-                                        height: 120,
-                                        fit: BoxFit.contain,
+                                      child: GestureDetector(
+                                        onTap: () => _onImageTap(image),
+                                        child: Image.asset(
+                                          image,
+                                          height: 120,
+                                          fit: BoxFit.contain,
+                                        ),
                                       ),
                                     ),
                                   );
@@ -377,25 +515,34 @@ class _FauEditPageState extends State<FauEditPage> {
                           ],
                         ),
 
-                        // Current score indicator (circle in upper right)
-                        if (isCurrentScore)
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: darkBlue,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 16,
+                        // Selection indicator (circle in upper right)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isSelectedScore
+                                  ? darkBlue
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelectedScore
+                                    ? darkBlue
+                                    : Colors.grey[400]!,
+                                width: 2,
                               ),
                             ),
+                            child: isCurrentScore
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
+                                : null,
                           ),
+                        ),
                       ],
                     ),
                   ),

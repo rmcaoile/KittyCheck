@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
+import 'package:cat_pain_detector/utils/string_utils.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
 import 'package:cat_pain_detector/services/file_service.dart';
@@ -235,7 +236,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
                 ),
                 TextButton(
                   onPressed: () async {
-                    final catName = nameController.text.trim();
+                    final catName = capitalizeFirstLetter(nameController.text.trim());
                     FocusScope.of(context).unfocus();
 
                     if (catName.isEmpty) {

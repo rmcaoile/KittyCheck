@@ -152,6 +152,112 @@ class _ComparisonPageState extends State<ComparisonPage> {
     }
   }
 
+  List<String> _buildImagePaths() {
+    final List<String> paths = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      paths.add(subjectPath);
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final img in images) {
+        paths.add(img);
+      }
+    }
+
+    return paths;
+  }
+
+  int _getStartIndex(String tappedImagePath) {
+    final subjectPath = _getSubjectImagePath();
+    if (subjectPath != null &&
+        subjectPath.isNotEmpty &&
+        subjectPath == tappedImagePath) {
+      return 0;
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    int offset = subjectPath != null && subjectPath.isNotEmpty ? 1 : 0;
+
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final img in images) {
+        if (img == tappedImagePath) {
+          return offset;
+        }
+        offset++;
+      }
+    }
+
+    return 0;
+  }
+
+  List<bool> _buildIsAssetList() {
+    final List<bool> isAssets = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      isAssets.add(false);
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      for (final _ in images) {
+        isAssets.add(true);
+      }
+    }
+
+    return isAssets;
+  }
+
+  List<String> _buildLabels() {
+    final List<String> labels = [];
+    final subjectPath = _getSubjectImagePath();
+    final actualScore = _getActualScore();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      labels.add(
+          // "${_currentResult.catName}'s ${widget.region} (Score: $actualScore)");
+          "${_currentResult.catName}'s ${widget.region}");
+
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final score = item['score'] as int;
+      final images = item['images'] as List<String>;
+      for (final _ in images) {
+        labels.add('Score $score');
+      }
+    }
+
+    return labels;
+  }
+
+  List<String> _buildDescriptions() {
+    final List<String> descriptions = [];
+    final subjectPath = _getSubjectImagePath();
+
+    if (subjectPath != null && subjectPath.isNotEmpty) {
+      descriptions.add('');
+    }
+
+    final referenceItems = referenceData[widget.region] ?? [];
+    for (final item in referenceItems) {
+      final images = item['images'] as List<String>;
+      final description = item['description'] as String;
+      for (final _ in images) {
+        descriptions.add(description);
+      }
+    }
+
+    return descriptions;
+  }
+
   Future<void> _navigateToEdit() async {
     final currentScore = _getActualScore();
 
@@ -181,7 +287,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
           ? newScore
           : _currentResult.headPositionScore;
 
-      final newTotalScore = newEarScore + newEyesScore + newMuzzleScore + newWhiskersScore + newHeadPositionScore;
+      final newTotalScore = newEarScore +
+          newEyesScore +
+          newMuzzleScore +
+          newWhiskersScore +
+          newHeadPositionScore;
 
       setState(() {
         switch (widget.region) {
@@ -277,10 +387,21 @@ class _ComparisonPageState extends State<ComparisonPage> {
             GestureDetector(
               onTap: () {
                 if (subjectImagePath != null && subjectImagePath.isNotEmpty) {
+                  final paths = _buildImagePaths();
+                  final isAssets = _buildIsAssetList();
+                  final labels = _buildLabels();
+                  final descriptions = _buildDescriptions();
+                  final startIndex = _getStartIndex(subjectImagePath);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ImageViewerPage(imagePath: subjectImagePath),
+                      builder: (context) => ImageViewerPage(
+                        imagePaths: paths,
+                        isAssetList: isAssets,
+                        initialIndex: startIndex,
+                        labels: labels,
+                        descriptions: descriptions,
+                      ),
                     ),
                   );
                 }
@@ -301,20 +422,23 @@ class _ComparisonPageState extends State<ComparisonPage> {
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                              child: const Icon(Icons.image_not_supported,
+                                  color: Colors.grey),
                             );
                           },
                         )
                       : Container(
                           color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                          child: const Icon(Icons.image_not_supported,
+                              color: Colors.grey),
                         ),
                 ),
               ),
             ),
             const SizedBox(height: 10),
             Text(
-              'Subject\'s ${widget.region} (Score: $actualScore)',
+              // '${_currentResult.catName}\'s ${widget.region} (Score: $actualScore)',
+              '${_currentResult.catName}\'s ${widget.region}',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -334,7 +458,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 margin: const EdgeInsets.only(bottom: 30),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isActualScore ? lightBlue.withValues(alpha: 0.1) : Colors.white,
+                  color: isActualScore
+                      ? lightBlue.withValues(alpha: 0.1)
+                      : Colors.white,
                   border: Border.all(
                     color: isActualScore ? lightBlue : Colors.grey[300]!,
                     width: isActualScore ? 2 : 1,
@@ -356,24 +482,68 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
                     // Reference images
                     if (images.length == 1)
-                      Center(
-                        child: Image.asset(
-                          images[0],
-                          height: 120,
-                          fit: BoxFit.contain,
+                      GestureDetector(
+                        onTap: () {
+                          final paths = _buildImagePaths();
+                          final isAssets = _buildIsAssetList();
+                          final labels = _buildLabels();
+                          final descriptions = _buildDescriptions();
+                          final startIndex = _getStartIndex(images[0]);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ImageViewerPage(
+                                imagePaths: paths,
+                                isAssetList: isAssets,
+                                initialIndex: startIndex,
+                                labels: labels,
+                                descriptions: descriptions,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Center(
+                          child: Image.asset(
+                            images[0],
+                            height: 120,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       )
                     else
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: images.map((image) {
+                        children: images.asMap().entries.map((entry) {
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Image.asset(
-                                image,
-                                height: 120,
-                                fit: BoxFit.contain,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: GestureDetector(
+                                onTap: () {
+                                  final paths = _buildImagePaths();
+                                  final isAssets = _buildIsAssetList();
+                                  final labels = _buildLabels();
+                                  final descriptions = _buildDescriptions();
+                                  final startIndex =
+                                      _getStartIndex(entry.value);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ImageViewerPage(
+                                        imagePaths: paths,
+                                        isAssetList: isAssets,
+                                        initialIndex: startIndex,
+                                        labels: labels,
+                                        descriptions: descriptions,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Image.asset(
+                                  entry.value,
+                                  height: 120,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           );
