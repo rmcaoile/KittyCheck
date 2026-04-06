@@ -147,12 +147,17 @@ class _EditResultPageState extends State<EditResultPage> {
   }
 
   Future<void> _saveChanges() async {
-    final catName = _catNameController.text.trim();
-    if (catName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cat name cannot be empty')),
-      );
-      return;
+    String? catName;
+    if (!widget.isTemporary) {
+      catName = _catNameController.text.trim();
+      if (catName.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cat name cannot be empty')),
+        );
+        return;
+      }
+    } else {
+      catName = widget.result.catName;
     }
 
     final updatedResult = widget.result.copyWith(
@@ -349,18 +354,20 @@ class _EditResultPageState extends State<EditResultPage> {
               ),
               const SizedBox(height: 20),
 
-              // Cat name input
-              TextField(
-                controller: _catNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Cat Name',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: darkBlue, width: 2),
+              // Sow edit cat name input only for saved results
+              if (!widget.isTemporary) ...[
+                TextField(
+                  controller: _catNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Cat Name',
+                    border: OutlineInputBorder(),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: darkBlue, width: 2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 30),
+                const SizedBox(height: 30),
+              ],
 
               // Individual scores
               Container(

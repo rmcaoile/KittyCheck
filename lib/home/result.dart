@@ -176,8 +176,6 @@ class _FGSResultPageState extends State<FGSResultPage> {
     return paths;
   }
 
-
-
   Future<void> _showSaveDialog() async {
     final TextEditingController nameController = TextEditingController();
     final dbService = DatabaseService();
@@ -434,8 +432,6 @@ class _FGSResultPageState extends State<FGSResultPage> {
     return Colors.grey;
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -555,6 +551,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
             else
               Column(
                 children: [
+                  /*
                   // Scoring method indicator
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -649,6 +646,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
                         const SizedBox(height: 20),
                       ],
                     ),
+                  */
 
                   // View more details button
                   TextButton.icon(
@@ -678,6 +676,16 @@ class _FGSResultPageState extends State<FGSResultPage> {
                           builder: (context) => ResultDetailPage(
                             result: tempResult,
                             isTemporary: true,
+                            onResultUpdated: (updated) {
+                              setState(() {
+                                earScore = updated.earScore;
+                                eyesScore = updated.eyesScore;
+                                muzzleScore = updated.muzzleScore;
+                                whiskersScore = updated.whiskersScore;
+                                headPositionScore = updated.headPositionScore;
+                                totalFgsScore = updated.totalFgsScore;
+                              });
+                            },
                           ),
                         ),
                       );

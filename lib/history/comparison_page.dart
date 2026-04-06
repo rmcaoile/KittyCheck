@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/widgets/image_viewer_page.dart';
+import 'package:cat_pain_detector/home/fau_edit_page.dart';
+import 'package:cat_pain_detector/services/database_service.dart';
 
-class ComparisonPage extends StatelessWidget {
+class ComparisonPage extends StatefulWidget {
   final FGSResult result;
   final String region;
 
@@ -13,6 +15,19 @@ class ComparisonPage extends StatelessWidget {
     required this.result,
     required this.region,
   });
+
+  @override
+  State<ComparisonPage> createState() => _ComparisonPageState();
+}
+
+class _ComparisonPageState extends State<ComparisonPage> {
+  late FGSResult _currentResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentResult = widget.result;
+  }
 
   // Reference data for FGS scoring
   static const Map<String, List<Map<String, dynamic>>> referenceData = {
@@ -104,36 +119,126 @@ class ComparisonPage extends StatelessWidget {
   };
 
   int _getActualScore() {
-    switch (region) {
+    switch (widget.region) {
       case 'Ear':
-        return result.earScore;
+        return _currentResult.earScore;
       case 'Eyes':
-        return result.eyesScore;
+        return _currentResult.eyesScore;
       case 'Muzzle':
-        return result.muzzleScore;
+        return _currentResult.muzzleScore;
       case 'Whiskers':
-        return result.whiskersScore;
+        return _currentResult.whiskersScore;
       case 'Head Position':
-        return result.headPositionScore;
+        return _currentResult.headPositionScore;
       default:
         return 0;
     }
   }
 
   String? _getSubjectImagePath() {
-    switch (region) {
+    switch (widget.region) {
       case 'Ear':
-        return result.earImagePath;
+        return _currentResult.earImagePath;
       case 'Eyes':
-        return result.eyesImagePath;
+        return _currentResult.eyesImagePath;
       case 'Muzzle':
-        return result.muzzleImagePath;
+        return _currentResult.muzzleImagePath;
       case 'Whiskers':
-        return result.whiskersImagePath;
+        return _currentResult.whiskersImagePath;
       case 'Head Position':
-        return result.headPositionImagePath;
+        return _currentResult.headPositionImagePath;
       default:
         return null;
+    }
+  }
+
+  Future<void> _navigateToEdit() async {
+    final currentScore = _getActualScore();
+
+    final newScore = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FauEditPage(
+          result: _currentResult,
+          region: widget.region,
+          currentScore: currentScore,
+        ),
+      ),
+    );
+
+    if (newScore != null && mounted) {
+      // Calculate what each score will be after update
+      final newEarScore =
+          (widget.region == 'Ear') ? newScore : _currentResult.earScore;
+      final newEyesScore =
+          (widget.region == 'Eyes') ? newScore : _currentResult.eyesScore;
+      final newMuzzleScore =
+          (widget.region == 'Muzzle') ? newScore : _currentResult.muzzleScore;
+      final newWhiskersScore = (widget.region == 'Whiskers')
+          ? newScore
+          : _currentResult.whiskersScore;
+      final newHeadPositionScore = (widget.region == 'Head Position')
+          ? newScore
+          : _currentResult.headPositionScore;
+
+      final newTotalScore = newEarScore + newEyesScore + newMuzzleScore + newWhiskersScore + newHeadPositionScore;
+
+      setState(() {
+        switch (widget.region) {
+          case 'Ear':
+            _currentResult = _currentResult.copyWith(
+              earScore: newScore,
+              totalFgsScore: newTotalScore,
+            );
+            break;
+          case 'Eyes':
+            _currentResult = _currentResult.copyWith(
+              eyesScore: newScore,
+              totalFgsScore: newTotalScore,
+            );
+            break;
+          case 'Muzzle':
+            _currentResult = _currentResult.copyWith(
+              muzzleScore: newScore,
+              totalFgsScore: newTotalScore,
+            );
+            break;
+          case 'Whiskers':
+            _currentResult = _currentResult.copyWith(
+              whiskersScore: newScore,
+              totalFgsScore: newTotalScore,
+            );
+            break;
+          case 'Head Position':
+            _currentResult = _currentResult.copyWith(
+              headPositionScore: newScore,
+              totalFgsScore: newTotalScore,
+            );
+            break;
+        }
+      });
+
+      // Save to database and return updated result to parent
+      if (_currentResult.id != null) {
+        try {
+          final dbService = DatabaseService();
+          await dbService.updateResult(_currentResult);
+          if (mounted) {
+            Navigator.of(context).pop(_currentResult);
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating score: $e')),
+            );
+          }
+        }
+      } else {
+        // For temporary results, also return updated result
+        if (mounted) {
+          Navigator.of(context).pop(_currentResult);
+        }
+      }
     }
   }
 
@@ -141,20 +246,27 @@ class ComparisonPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final actualScore = _getActualScore();
     final subjectImagePath = _getSubjectImagePath();
-    final referenceItems = referenceData[region] ?? [];
+    final referenceItems = referenceData[widget.region] ?? [];
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: lightBlue,
         centerTitle: true,
         title: Text(
-          '$region Comparison',
+          '${widget.region} Comparison',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _navigateToEdit,
+            tooltip: 'Edit ${widget.region} score',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -202,7 +314,7 @@ class ComparisonPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Subject\'s $region (Score: $actualScore)',
+              'Subject\'s ${widget.region} (Score: $actualScore)',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,

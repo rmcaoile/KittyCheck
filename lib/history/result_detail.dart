@@ -13,7 +13,7 @@ class ResultDetailPage extends StatefulWidget {
   final bool showDeleteButton; // true for history view, false for result view
   final bool isTemporary; // true for unsaved results, false for saved results
   final VoidCallback? onResultDeleted;
-  final VoidCallback? onResultUpdated;
+  final void Function(FGSResult)? onResultUpdated;
 
   const ResultDetailPage({
     super.key,
@@ -36,8 +36,6 @@ class _ResultDetailPageState extends State<ResultDetailPage> {
     super.initState();
     _currentResult = widget.result;
   }
-
-
 
   Future<void> _refreshResult() async {
     if (_currentResult.id != null) {
@@ -74,17 +72,32 @@ class _ResultDetailPageState extends State<ResultDetailPage> {
       } else {
         // For saved results, refresh the data
         await _refreshResult();
-        widget.onResultUpdated?.call();
+        widget.onResultUpdated?.call(editedResult);
+        // Pop back to SavedResultPage
+        Navigator.of(context).pop(editedResult);
       }
     }
   }
 
-  void _navigateToComparison(BuildContext context, String facialRegion) {
-    Navigator.of(context).push(
+  void _navigateToComparison(BuildContext context, String facialRegion) async {
+    final updatedResult = await Navigator.of(context).push<FGSResult>(
       MaterialPageRoute(
-        builder: (context) => ComparisonPage(result: _currentResult, region: facialRegion),
+        builder: (context) =>
+            ComparisonPage(result: _currentResult, region: facialRegion),
       ),
     );
+
+    // If result was updated, refresh the display
+    if (updatedResult != null && mounted) {
+      setState(() {
+        _currentResult = updatedResult;
+      });
+      widget.onResultUpdated?.call(updatedResult);
+      // refresh db for saved results
+      if (!widget.isTemporary) {
+        await _refreshResult();
+      }
+    }
   }
 
   void _deleteResult(BuildContext context) async {
@@ -231,7 +244,7 @@ class _ResultDetailPageState extends State<ResultDetailPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(_currentResult),
         ),
         actions: [
           // Edit button
@@ -335,23 +348,43 @@ class _ResultDetailPageState extends State<ResultDetailPage> {
                   const SizedBox(height: 16),
 
                   // Ear
-                  _buildFauItem(context, 'Ear', _currentResult.earImagePath ?? '', _currentResult.earScore),
+                  _buildFauItem(
+                      context,
+                      'Ear',
+                      _currentResult.earImagePath ?? '',
+                      _currentResult.earScore),
                   const SizedBox(height: 8),
 
                   // Eyes
-                  _buildFauItem(context, 'Eyes', _currentResult.eyesImagePath ?? '', _currentResult.eyesScore),
+                  _buildFauItem(
+                      context,
+                      'Eyes',
+                      _currentResult.eyesImagePath ?? '',
+                      _currentResult.eyesScore),
                   const SizedBox(height: 8),
 
                   // Muzzle
-                  _buildFauItem(context, 'Muzzle', _currentResult.muzzleImagePath ?? '', _currentResult.muzzleScore),
+                  _buildFauItem(
+                      context,
+                      'Muzzle',
+                      _currentResult.muzzleImagePath ?? '',
+                      _currentResult.muzzleScore),
                   const SizedBox(height: 8),
 
                   // Whiskers
-                  _buildFauItem(context, 'Whiskers', _currentResult.whiskersImagePath ?? '', _currentResult.whiskersScore),
+                  _buildFauItem(
+                      context,
+                      'Whiskers',
+                      _currentResult.whiskersImagePath ?? '',
+                      _currentResult.whiskersScore),
                   const SizedBox(height: 8),
 
                   // Head Position
-                  _buildFauItem(context, 'Head Position', _currentResult.headPositionImagePath ?? '', _currentResult.headPositionScore),
+                  _buildFauItem(
+                      context,
+                      'Head Position',
+                      _currentResult.headPositionImagePath ?? '',
+                      _currentResult.headPositionScore),
                 ],
               ),
             ),

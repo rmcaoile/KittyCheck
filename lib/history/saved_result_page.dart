@@ -99,8 +99,6 @@ class _SavedResultPageState extends State<SavedResultPage> {
     }
   }
 
-
-
   Future<void> _refreshResult() async {
     if (_currentResult.id != null) {
       try {
@@ -198,7 +196,10 @@ class _SavedResultPageState extends State<SavedResultPage> {
                     builder: (context) => ResultDetailPage(
                       result: _currentResult,
                       showDeleteButton: false, // Don't show delete in details view
-                      onResultUpdated: () => _refreshResult(),
+                      onResultUpdated: (updatedResult) {
+                        _refreshResult();
+                        widget.onResultUpdated?.call();
+                      },
                     ),
                   ),
                 );
