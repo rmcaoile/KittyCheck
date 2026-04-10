@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:image/image.dart' as img;
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/services/scoring_settings_service.dart';
 import 'package:cat_pain_detector/services/ai_scoring_service.dart';
@@ -178,6 +179,128 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
       if (mounted) Navigator.of(context).pop();
 
       // Show error
+      if (mounted) {
+        _showErrorDialog('Test failed: $e\n\nStack trace: $stackTrace');
+      }
+    }
+  }
+
+  Future<void> _runCNNScorersTest() async {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing CNN FGS Scorers...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final aiService = AIScoringService();
+      await aiService.initialize();
+
+      final regionNames = ['ears', 'eyes', 'muzzle', 'whiskers', 'head'];
+      final scores = <String, int>{};
+
+      for (final regionName in regionNames) {
+        final imageData = await rootBundle
+            .load('assets/images/output_tflite/$regionName.png');
+        final bytes = imageData.buffer.asUint8List();
+
+        final image = img.decodeImage(bytes);
+        if (image == null) {
+          continue;
+        }
+        // DEBUG: Log image dimensions for head
+        if (regionName == 'head') {
+          debugPrint(
+              '[SETTINGS DEBUG] head image: width=${image.width}, height=${image.height}');
+        }
+
+        final resizedImage = img.copyResize(image,
+            width: 224, height: 224, interpolation: img.Interpolation.linear);
+        if (regionName == 'head') {
+          debugPrint(
+              '[SETTINGS DEBUG] resized head: width=${resizedImage.width}, height=${resizedImage.height}');
+        }
+        final inputData = aiService.prepareImageForInference(resizedImage,
+            normalize: true, regionName: regionName);
+
+        final scorer = switch (regionName) {
+          'ears' => aiService.earsScorer,
+          'eyes' => aiService.eyesScorer,
+          'muzzle' => aiService.muzzleScorer,
+          'whiskers' => aiService.whiskersScorer,
+          'head' => aiService.headScorer,
+          _ => null,
+        };
+
+        if (scorer != null) {
+          final outputData = aiService.runInference(scorer, inputData);
+          final probabilities = outputData.first as List<double>;
+          // DEBUG: Log raw model outputs for head
+          if (regionName == 'head') {
+            debugPrint(
+                '[SETTINGS DEBUG] head_scorer raw outputs: $probabilities');
+          }
+          final predictedClass = probabilities
+              .indexOf(probabilities.reduce((a, b) => a > b ? a : b));
+          scores[regionName] = predictedClass;
+          if (regionName == 'head') {
+            debugPrint(
+                '[SETTINGS DEBUG] head_scorer predicted class: $predictedClass');
+          }
+        }
+      }
+
+      final totalScore = scores.values.fold(0, (a, b) => a + b);
+
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('CNN FGS Scorers Test Results'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Pre-cropped Images from output_tflite:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  const Text('Individual Scores:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...scores.entries.map((e) => Text('  ${e.key}: ${e.value}')),
+                  const SizedBox(height: 8),
+                  Text('Total FGS Score: $totalScore',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      aiService.dispose();
+    } catch (e, stackTrace) {
+      if (mounted) Navigator.of(context).pop();
       if (mounted) {
         _showErrorDialog('Test failed: $e\n\nStack trace: $stackTrace');
       }
@@ -397,6 +520,33 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
               const SizedBox(height: 8),
               const Text(
                 'Test the AI pipeline on the sample image and view cropped regions.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _runCNNScorersTest,
+                  icon: const Icon(Icons.model_training),
+                  label: const Text('Test CNN FGS Scorers'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Test CNN FGS scorers using pre-cropped images from output_tflite.',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.black54,

@@ -17,6 +17,12 @@ class AIScoringService {
   Interpreter? _whiskersScorer;
   Interpreter? _headScorer;
 
+  Interpreter? get earsScorer => _earsScorer;
+  Interpreter? get eyesScorer => _eyesScorer;
+  Interpreter? get muzzleScorer => _muzzleScorer;
+  Interpreter? get whiskersScorer => _whiskersScorer;
+  Interpreter? get headScorer => _headScorer;
+
   bool _isInitialized = false;
 
   /// Initialize all TFLite models
@@ -45,8 +51,14 @@ class AIScoringService {
   }
 
   Future<Interpreter> _loadModel(String assetPath) async {
+    print('[DART DEBUG] Loading model from asset: $assetPath');
+
     final interpreterOptions = InterpreterOptions();
     final interpreter = await Interpreter.fromAsset(assetPath, options: interpreterOptions);
+
+    // DEBUG: Log model details
+    print('[DART DEBUG] Model loaded: $assetPath');
+
     interpreter.allocateTensors();
     return interpreter;
   }
@@ -112,10 +124,14 @@ class AIScoringService {
     final expandedBbox = _expandBbox(faceBbox, originalImage.width, originalImage.height, landmarks: landmarks);
     final croppedFace = _cropImage(originalImage, expandedBbox);
 
-    final croppedFaceResized = img.copyResize(croppedFace, width: 224, height: 224);
+    final croppedFaceResized = img.copyResize(croppedFace,
+        width: 224, height: 224, interpolation: img.Interpolation.linear);
 
     final regionCenters = await _detectRegions(croppedFaceResized);
+    print('[DART DEBUG] Region centers detected: $regionCenters');
+
     final rotationAngle = _calculateRotationAngle(regionCenters);
+    print('[DART DEBUG] Rotation angle: $rotationAngle degrees');
 
     final rotatedData = _rotateFace(croppedFaceResized, regionCenters, rotationAngle);
     final rotatedFace = rotatedData['image'] as img.Image;
@@ -124,16 +140,12 @@ class AIScoringService {
     final rotatedLandmarksImage = _createLandmarksImage(rotatedFace, rotatedCenters);
 
     final croppedRegions = _cropRegions(rotatedFace, rotatedCenters);
-    final scores = await _scoreRegions(croppedRegions);
 
+    // Prepare head image before scoring 
     final headImage = _prepareHeadImage(originalImage, faceBbox);
-    final landmarksImage = _createLandmarksImage(croppedFaceResized, regionCenters);
-
     croppedRegions['head'] = headImage;
-    croppedRegions['cropped_face'] = croppedFaceResized;
-    croppedRegions['landmarks_face'] = landmarksImage;
-    croppedRegions['rotated_face'] = rotatedFace;
-    croppedRegions['rotated_face_with_landmarks'] = rotatedLandmarksImage;
+
+    final scores = await _scoreRegions(croppedRegions);
 
     final croppedImages = <String, Uint8List>{};
     for (final entry in croppedRegions.entries) {
@@ -153,17 +165,17 @@ class AIScoringService {
     }
 
     final resizedImage = _resizeWithPadding(image, 224, 224);
-    final inputData = _prepareImageForInference(resizedImage, normalize: false);
-    final outputData = _runInference(_faceDetector!, inputData);
+    final inputData = prepareImageForInference(resizedImage, normalize: false);
+    final outputData = runInference(_faceDetector!, inputData);
 
     // Output is [x1, y1, x2, y2] normalized coordinates
-    final predBboxNorm = outputData.first;
+    final predBboxNorm = outputData.first as List<dynamic>;
 
     // Convert normalized coordinates to pixel coordinates
-    final x1 = (predBboxNorm[0] * image.width).round();
-    final y1 = (predBboxNorm[1] * image.height).round();
-    final x2 = (predBboxNorm[2] * image.width).round();
-    final y2 = (predBboxNorm[3] * image.height).round();
+    final x1 = ((predBboxNorm[0] as num) * image.width).round();
+    final y1 = ((predBboxNorm[1] as num) * image.height).round();
+    final x2 = ((predBboxNorm[2] as num) * image.width).round();
+    final y2 = ((predBboxNorm[3] as num) * image.height).round();
 
     // Clamp to image bounds
     final clampedX1 = math.max(0, x1);
@@ -202,9 +214,9 @@ class AIScoringService {
 
     final bw = x2 - x1;
     final bh = y2 - y1;
-    final dx = (bw * 0.15).round();
-    final dy = (bh * 0.15).round();
-    final topMarginExtra = (bh * 0.20).round();
+    final dx = (bw * 0.25).round();
+    final dy = (bh * 0.25).round();
+    final topMarginExtra = (bh * 0.30).round();
 
     final expandedX1 = math.max(0, x1 - dx);
     final expandedY1 = math.max(0, y1 - dy - topMarginExtra);
@@ -230,9 +242,10 @@ class AIScoringService {
       throw Exception('Region detector not loaded');
     }
 
-    final resizedImage = img.copyResize(image, width: 224, height: 224);
-    final inputData = _prepareImageForInference(resizedImage, normalize: false);
-    final outputData = _runInference(_regionDetector!, inputData);
+    final resizedImage = img.copyResize(image,
+        width: 224, height: 224, interpolation: img.Interpolation.linear);
+    final inputData = prepareImageForInference(resizedImage, normalize: false);
+    final outputData = runInference(_regionDetector!, inputData);
 
     // Output is 10 values: [x1,y1,x2,y2,x3,y3,x4,y4,x5,y5] for 5 regions
     final predCoords = outputData.first as List<double>;
@@ -248,22 +261,6 @@ class AIScoringService {
       final y = math.max(0.0, math.min(224.0, yNorm * 224));
 
       regionCenters[regionOrder[i]] = [x, y];
-    }
-
-    final leftEarY = regionCenters['left_ear']![1];
-    final rightEarY = regionCenters['right_ear']![1];
-    final leftEyeY = regionCenters['left_eye']![1];
-    final rightEyeY = regionCenters['right_eye']![1];
-    final noseY = regionCenters['nose']![1];
-
-    final avgEarY = (leftEarY + rightEarY) / 2;
-    final avgEyeY = (leftEyeY + rightEyeY) / 2;
-
-    if (noseY < avgEyeY) {
-      for (final key in regionCenters.keys) {
-        final center = regionCenters[key]!;
-        regionCenters[key] = [center[0], 224.0 - center[1]];
-      }
     }
 
     return regionCenters;
@@ -411,7 +408,8 @@ class AIScoringService {
 
       if (xMax > xMin && yMax > yMin) {
         final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-        regions['ears'] = img.copyResize(cropped, width: 224, height: 150);
+        regions['ears'] = img.copyResize(cropped,
+            width: 224, height: 150, interpolation: img.Interpolation.linear);
       }
     }
 
@@ -426,7 +424,8 @@ class AIScoringService {
 
       if (xMax > xMin && yMax > yMin) {
         final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
-        regions['eyes'] = img.copyResize(cropped, width: 224, height: 150);
+        regions['eyes'] = img.copyResize(cropped,
+            width: 224, height: 150, interpolation: img.Interpolation.linear);
       }
     }
 
@@ -482,13 +481,22 @@ class AIScoringService {
       final scorer = regionModelMap[regionName];
 
       if (regionImage != null && scorer != null) {
-        final resizedImage = img.copyResizeCropSquare(regionImage, size: 224);
-        final inputData = _prepareImageForInference(resizedImage, normalize: true);
-        final outputData = _runInference(scorer, inputData);
+        final resizedImage = img.copyResize(regionImage,
+            width: 224, height: 224, interpolation: img.Interpolation.linear);
+        final inputData = prepareImageForInference(resizedImage,
+            normalize: true, regionName: regionName);
+        final outputData = runInference(scorer, inputData);
 
         final probabilities = outputData.first as List<double>;
-        final predictedClass = probabilities.indexOf(probabilities.reduce(math.max));
+
+        // DEBUG: Log raw model outputs
+        print('[DART DEBUG] ${regionName}_scorer raw outputs: $probabilities');
+
+        final predictedClass =
+            probabilities.indexOf(probabilities.reduce(math.max));
         scores[regionName] = predictedClass;
+        print(
+            '[DART DEBUG] ${regionName}_scorer predicted class: ${scores[regionName]}');
       } else {
         scores[regionName] = 0;
       }
@@ -500,26 +508,33 @@ class AIScoringService {
   img.Image _prepareHeadImage(img.Image originalImage, List<int> faceBbox) {
     final imageWithBox = img.Image.from(originalImage);
     img.drawRect(imageWithBox,
-      x1: faceBbox[0], y1: faceBbox[1], x2: faceBbox[2], y2: faceBbox[3],
-      color: img.ColorRgb8(255, 0, 0), thickness: 3);
+        x1: faceBbox[0],
+        y1: faceBbox[1],
+        x2: faceBbox[2],
+        y2: faceBbox[3],
+        color: img.ColorRgb8(255, 0, 0),
+        thickness: 3);
 
     return _resizeWithPadding(imageWithBox, 224, 224);
   }
 
   /// Resize image with padding to maintain aspect ratio
-  img.Image _resizeWithPadding(img.Image image, int targetWidth, int targetHeight) {
+  img.Image _resizeWithPadding(
+      img.Image image, int targetWidth, int targetHeight) {
     final srcWidth = image.width;
     final srcHeight = image.height;
 
     final scale = math.min(targetWidth / srcWidth, targetHeight / srcHeight);
-    final newWidth = (srcWidth * scale).round();
-    final newHeight = (srcHeight * scale).round();
-
-    final resized = img.copyResize(image, width: newWidth, height: newHeight, interpolation: img.Interpolation.linear);
+    final newWidth = (srcWidth * scale).toInt();
+    final newHeight = (srcHeight * scale).toInt();
+    final resized = img.copyResize(image,
+        width: newWidth,
+        height: newHeight,
+        interpolation: img.Interpolation.linear);
     final result = img.Image(width: targetWidth, height: targetHeight);
-
-    final pasteX = ((targetWidth - newWidth) / 2).round();
-    final pasteY = ((targetHeight - newHeight) / 2).round();
+    img.fill(result, color: img.ColorRgb8(0, 0, 0));
+    final pasteX = (targetWidth - newWidth) ~/ 2;
+    final pasteY = (targetHeight - newHeight) ~/ 2;
 
     for (int y = 0; y < newHeight; y++) {
       for (int x = 0; x < newWidth; x++) {
@@ -532,37 +547,79 @@ class AIScoringService {
   }
 
   /// Prepare image for TFLite inference (NCHW format)
-  List<List<List<List<double>>>> _prepareImageForInference(img.Image image, {bool normalize = true}) {
-    final rgbImage = image.numChannels == 4
-        ? img.copyResize(image, width: image.width, height: image.height)
-        : image;
+  /// Matches Python's prepare_image_for_tflite() exactly
+  List<List<List<List<double>>>> prepareImageForInference(img.Image image,
+      {bool normalize = true, String regionName = "unknown"}) {
+    // Ensure we have an RGB image
+    img.Image rgbImage;
+    if (image.numChannels == 4) {
+      // Handle RGBA - convert to RGB
+      rgbImage = img.Image(width: image.width, height: image.height);
+      for (int y = 0; y < image.height; y++) {
+        for (int x = 0; x < image.width; x++) {
+          final pixel = image.getPixel(x, y);
+          rgbImage.setPixel(x, y,
+              img.ColorRgb8(pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt()));
+        }
+      }
+    } else {
+      rgbImage = image;
+    }
 
     final width = rgbImage.width;
     final height = rgbImage.height;
-    final pixels = rgbImage.getBytes();
-    final bytesPerPixel = pixels.length ~/ (width * height);
 
-    final tensor = List.generate(1, (b) => List.generate(3, (c) {
-      if (c == 0) {
-        return List.generate(height, (y) => List.generate(width, (x) {
-          final idx = (y * width + x) * bytesPerPixel;
-          final r = (pixels[idx] as int).toDouble() / 255.0;
-          return normalize ? (r - 0.485) / 0.229 : r;
-        }));
-      } else if (c == 1) {
-        return List.generate(height, (y) => List.generate(width, (x) {
-          final idx = (y * width + x) * bytesPerPixel + 1;
-          final g = (pixels[idx] as int).toDouble() / 255.0;
-          return normalize ? (g - 0.456) / 0.224 : g;
-        }));
-      } else {
-        return List.generate(height, (y) => List.generate(width, (x) {
-          final idx = (y * width + x) * bytesPerPixel + 2;
-          final b = (pixels[idx] as int).toDouble() / 255.0;
-          return normalize ? (b - 0.406) / 0.225 : b;
-        }));
+    // DEBUG: Log first 10 raw pixel values before normalization (y=0, x=0-9)
+    print('\n[DART DEBUG] $regionName - Raw pixels (y=0, x=0-9):');
+    final rawPixels = <double>[];
+    for (int x = 0; x < 10; x++) {
+      final pixel = rgbImage.getPixel(x, 0);
+      rawPixels.add(pixel.r.toDouble());
+    }
+    print('  R channel raw: $rawPixels');
+
+    // Build NCHW tensor - matching Python's np.transpose(img_array, (2, 0, 1))
+    final tensor = List.generate(
+        1,
+        (b) => [
+              // Channel 0 (Red in RGB) - matching Python: mean=0.485, std=0.229
+              List.generate(
+                  height,
+                  (y) => List.generate(width, (x) {
+                        final pixel = rgbImage.getPixel(x, y);
+                        final r = pixel.r.toDouble() / 255.0;
+                        return normalize ? (r - 0.485) / 0.229 : r;
+                      })),
+              // Channel 1 (Green in RGB) - matching Python: mean=0.456, std=0.224
+              List.generate(
+                  height,
+                  (y) => List.generate(width, (x) {
+                        final pixel = rgbImage.getPixel(x, y);
+                        final g = pixel.g.toDouble() / 255.0;
+                        return normalize ? (g - 0.456) / 0.224 : g;
+                      })),
+              // Channel 2 (Blue in RGB) - matching Python: mean=0.406, std=0.225
+              List.generate(
+                  height,
+                  (y) => List.generate(width, (x) {
+                        final pixel = rgbImage.getPixel(x, y);
+                        final b = pixel.b.toDouble() / 255.0;
+                        return normalize ? (b - 0.406) / 0.225 : b;
+                      }))
+            ]);
+
+    // DEBUG: Log first 10 values of each channel (NCHW format)
+    // Match Python's format: input_data[0, c, 0, :10] - first 10 values of first row
+    print('\n[DART DEBUG] $regionName - Input tensor (NCHW):');
+    for (int c = 0; c < 3; c++) {
+      final cName = c == 0 ? 'R' : (c == 1 ? 'G' : 'B');
+      final first10 = <double>[];
+      // Match Python: input_data[0, c, 0, :10] - first row (y=0), first 10 columns (x=0-9)
+      for (int x = 0; x < 10; x++) {
+        first10.add(tensor[0][c][0][x]);
       }
-    }));
+      print('  Channel $cName (c=$c): $first10');
+    }
 
     return tensor;
   }
@@ -598,8 +655,19 @@ class AIScoringService {
   }
 
   /// Run inference with TFLite interpreter
-  List<dynamic> _runInference(Interpreter interpreter, List<List<List<List<double>>>> inputData) {
+  List<dynamic> runInference(Interpreter interpreter, List<List<List<List<double>>>> inputData) {
     final outputShape = interpreter.getOutputTensors()[0].shape;
+
+    // DEBUG: Log input shape
+    print(
+        '[DART DEBUG] Inference input shape: [1, 3, ${inputData[0][0].length}, ${inputData[0][0][0].length}]');
+    // First 6 values of R channel, y=0
+    final first6 = <double>[];
+    for (int x = 0; x < 6; x++) {
+      first6.add(inputData[0][0][0][x]);
+    }
+    print(
+        '[DART DEBUG] Inference input first values (R channel, y=0, x=0-5): $first6');
 
     List output;
     if (outputShape.length == 2 && outputShape[0] == 1) {
@@ -615,9 +683,12 @@ class AIScoringService {
 
     interpreter.run(inputData, output);
 
+    // DEBUG: Log output
     if (output is List && output.isNotEmpty && output[0] is List) {
+      print('[DART DEBUG] Inference output: ${(output[0] as List).toList()}');
       return [output[0]];
     }
+    print('[DART DEBUG] Inference output: $output');
     return [output];
   }
 }

@@ -73,6 +73,7 @@ flutter:
     - assets/images/cat_logo.png
     - assets/images/cat_sample.png
     - assets/images/test_sample.png
+    - assets/images/output_tflite/
     - assets/fgs_manual/
     # TFLite models for AI scoring
     - assets/models/face_detector.tflite
