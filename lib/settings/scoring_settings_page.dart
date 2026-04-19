@@ -92,6 +92,7 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
       final result = await aiService.scoreImage(tempImagePath);
       final scores = result['scores'] as Map<String, int>;
       final croppedImages = result['croppedImages'] as Map<String, Uint8List>;
+      final debugImages = result['debugImages'] as Map<String, Uint8List>?;
 
       // Save cropped images to app documents directory for comparison
       final appDir = await FileService.getAppDirectory();
@@ -109,10 +110,16 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
         savedPaths[regionName] = imagePath;
       }
 
-      // Also save the intermediate cropped regions before scoring for comparison
-      final intermediateDir = Directory('$appDir/intermediate_crops');
-      if (!intermediateDir.existsSync()) {
-        intermediateDir.createSync(recursive: true);
+      // Save debug images
+      final debugSavedPaths = <String, String>{};
+      if (debugImages != null) {
+        for (final entry in debugImages.entries) {
+          final imageName = entry.key;
+          final imageData = entry.value;
+          final imagePath = '${debugDir.path}/${imageName}.jpg';
+          File(imagePath).writeAsBytesSync(imageData);
+          debugSavedPaths[imageName] = imagePath;
+        }
       }
 
       // Calculate total score
@@ -132,32 +139,58 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Test Image: test_sample.png'),
+                  const Text('Test Image: test_sample.png'),
                   const SizedBox(height: 16),
-                  const Text('Individual Scores:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Individual Scores:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   ...scores.entries.map((e) => Text('  ${e.key}: ${e.value}')),
                   const SizedBox(height: 8),
-                  Text('Total FGS Score: $totalScore', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Total FGS Score: $totalScore',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  const Text('Cropped Images Saved:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Cropped Region Images:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   ...savedPaths.entries.map((e) => Row(
-                    children: [
-                      Expanded(child: Text('  ${e.key}')),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => ImageViewerPage(
-                                imagePath: e.value,
-                                isAsset: false,
-                              ),
+                        children: [
+                          Expanded(child: Text('  ${e.key}')),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ImageViewerPage(
+                                    imagePath: e.value,
+                                    isAsset: false,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('View'),
+                          ),
+                        ],
+                      )),
+                  if (debugSavedPaths.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text('Debug Images:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    ...debugSavedPaths.entries.map((e) => Row(
+                          children: [
+                            Expanded(child: Text('  ${e.key}')),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => ImageViewerPage(
+                                      imagePath: e.value,
+                                      isAsset: false,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text('View'),
                             ),
-                          );
-                        },
-                        child: const Text('View'),
-                      ),
-                    ],
-                  )),
+                          ],
+                        )),
+                  ],
                   const SizedBox(height: 16),
                 ],
               ),

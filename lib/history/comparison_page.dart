@@ -34,85 +34,85 @@ class _ComparisonPageState extends State<ComparisonPage> {
     'Ear': [
       {
         'score': 0,
-        'images': ['assets/fgs_manual/ears_0.jpeg'],
+        'images': ['assets/fgs_manual/ears_0.png'],
         'description': 'The ears are upwards and facing forward.',
       },
       {
         'score': 1,
-        'images': ['assets/fgs_manual/ears_1.jpeg'],
+        'images': ['assets/fgs_manual/ears_1.png'],
         'description': 'The ears are slightly pulled apart (the distance between the ear tips is increased). Score 1 if uncertain.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/ears_2.jpeg'],
+        'images': ['assets/fgs_manual/ears_2.png'],
         'description': 'The ears are flattened and rotated outwards. The ear tips are clearly pulled apart. The back of the ears is visible.',
       },
     ],
     'Eyes': [
       {
         'score': 0,
-        'images': ['assets/fgs_manual/eyes_0.jpeg'],
+        'images': ['assets/fgs_manual/eyes_0.png'],
         'description': 'The eyes are round and open.',
       },
       {
         'score': 1,
-        'images': ['assets/fgs_manual/eyes_1.jpeg'],
+        'images': ['assets/fgs_manual/eyes_1.png'],
         'description': 'The eyes are partially closed.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/eyes_2.jpeg'],
+        'images': ['assets/fgs_manual/eyes_2.png'],
         'description': 'The eyes are squinted (almost closed).',
       },
     ],
     'Muzzle': [
       {
         'score': 0,
-        'images': ['assets/fgs_manual/muzzle_0.jpeg'],
+        'images': ['assets/fgs_manual/muzzle_0.png'],
         'description': 'The muzzle is relaxed and has a round shape.',
       },
       {
         'score': 1,
-        'images': ['assets/fgs_manual/muzzle_1.jpeg'],
+        'images': ['assets/fgs_manual/muzzle_1.png'],
         'description': 'The muzzle is mildly tense and flattened. Score 1 if uncertain.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/muzzle_2.jpeg'],
+        'images': ['assets/fgs_manual/muzzle_2.png'],
         'description': 'The muzzle is clearly tense and flattened/stretched. It has an elliptical shape.',
       },
     ],
     'Whiskers': [
       {
         'score': 0,
-        'images': ['assets/fgs_manual/whiskers_0.jpeg'],
+        'images': ['assets/fgs_manual/whiskers_0.png'],
         'description': 'The whiskers are relaxed, spread out and loosely curved.',
       },
       {
         'score': 1,
-        'images': ['assets/fgs_manual/whiskers_1.jpeg'],
+        'images': ['assets/fgs_manual/whiskers_1.png'],
         'description': 'The whiskers are closer together at their origin. They can be slightly curved or straight. Score 1 if uncertain.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/whiskers_2.jpeg'],
+        'images': ['assets/fgs_manual/whiskers_2.png'],
         'description': 'The whiskers are tense and normally spiked at the end (moving forward and away from the face).',
       },
     ],
     'Head Position': [
       {
         'score': 0,
-        'images': ['assets/fgs_manual/head_0a.jpeg', 'assets/fgs_manual/head_0b.jpeg'],
+        'images': ['assets/fgs_manual/head_0a.png', 'assets/fgs_manual/head_0b.png'],
         'description': 'The head is above the shoulder line. The cat may be standing or lying (in a comfortable and relaxed position).',
       },
       {
         'score': 1,
-        'images': ['assets/fgs_manual/head_1.jpeg'],
+        'images': ['assets/fgs_manual/head_1.png'],
         'description': 'The head is aligned with the shoulder line. Score 1 if uncertain.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/head_2a.jpeg', 'assets/fgs_manual/head_2b.jpeg'],
+        'images': ['assets/fgs_manual/head_2a.png', 'assets/fgs_manual/head_2b.png'],
         'description': 'The head is below the shoulder line OR tilted down (chin towards the chest).',
       },
     ],

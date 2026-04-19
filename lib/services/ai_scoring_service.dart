@@ -51,13 +51,8 @@ class AIScoringService {
   }
 
   Future<Interpreter> _loadModel(String assetPath) async {
-    print('[DART DEBUG] Loading model from asset: $assetPath');
-
     final interpreterOptions = InterpreterOptions();
     final interpreter = await Interpreter.fromAsset(assetPath, options: interpreterOptions);
-
-    // DEBUG: Log model details
-    print('[DART DEBUG] Model loaded: $assetPath');
 
     interpreter.allocateTensors();
     return interpreter;
@@ -128,16 +123,12 @@ class AIScoringService {
         width: 224, height: 224, interpolation: img.Interpolation.linear);
 
     final regionCenters = await _detectRegions(croppedFaceResized);
-    print('[DART DEBUG] Region centers detected: $regionCenters');
 
     final rotationAngle = _calculateRotationAngle(regionCenters);
-    print('[DART DEBUG] Rotation angle: $rotationAngle degrees');
 
     final rotatedData = _rotateFace(croppedFaceResized, regionCenters, rotationAngle);
     final rotatedFace = rotatedData['image'] as img.Image;
     final rotatedCenters = rotatedData['centers'] as Map<String, List<double>>;
-
-    final rotatedLandmarksImage = _createLandmarksImage(rotatedFace, rotatedCenters);
 
     final croppedRegions = _cropRegions(rotatedFace, rotatedCenters);
 
@@ -152,9 +143,25 @@ class AIScoringService {
       croppedImages[entry.key] = Uint8List.fromList(img.encodeJpg(entry.value as img.Image));
     }
 
+    // Create debug images
+    final rotatedFaceWithLandmarks =
+        _createLandmarksImage(rotatedFace, rotatedCenters);
+    final croppedFaceWithLandmarks =
+        _createLandmarksImage(croppedFaceResized, regionCenters);
+
+    final debugImages = <String, Uint8List>{
+      'rotatedFace': Uint8List.fromList(img.encodeJpg(rotatedFace)),
+      'rotatedFaceWithLandmarks':
+          Uint8List.fromList(img.encodeJpg(rotatedFaceWithLandmarks)),
+      'croppedFace': Uint8List.fromList(img.encodeJpg(croppedFaceResized)),
+      'croppedFaceWithLandmarks':
+          Uint8List.fromList(img.encodeJpg(croppedFaceWithLandmarks)),
+    };
+
     return {
       'scores': scores,
       'croppedImages': croppedImages,
+      'debugImages': debugImages,
     };
   }
 
@@ -431,14 +438,27 @@ class AIScoringService {
 
     // Crop muzzle region
     final nose = centers['nose'];
-    if (nose != null) {
+    final leftEyeLocal = centers['left_eye'];
+    final rightEyeLocal = centers['right_eye'];
+    if (nose != null && leftEyeLocal != null && rightEyeLocal != null) {
       final cx = nose[0];
       final cy = nose[1];
-      final muzzleWidth = 120;
+
+      // Width: eye-to-eye distance * 0.6 
+      final eyeDistance = math.sqrt(
+          math.pow(rightEyeLocal[0] - leftEyeLocal[0], 2) +
+              math.pow(rightEyeLocal[1] - leftEyeLocal[1], 2));
+      final muzzleWidth = math.max(100.0, eyeDistance * 0.6);
+
+      // Height: focus on muzzle around nose
+      final noseToEyeDist = leftEyeLocal[1] - nose[1];
+      final marginYTop = math.max(35.0, noseToEyeDist * 0.5);
+      final marginYBottom = math.max(45.0, noseToEyeDist * 0.5);
+
       final xMin = math.max(0, (cx - muzzleWidth / 2).round());
       final xMax = math.min(image.width, (cx + muzzleWidth / 2).round());
-      final yMin = math.max(0, (cy - 40).round());
-      final yMax = math.min(image.height, (cy + 90).round());
+      final yMin = math.max(0, (cy - marginYTop).round());
+      final yMax = math.min(image.height, (cy + marginYBottom).round());
 
       if (xMax > xMin && yMax > yMin) {
         final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
@@ -447,14 +467,32 @@ class AIScoringService {
     }
 
     // Crop whiskers region
-    if (nose != null) {
+    final leftEarLocal = centers['left_ear'];
+    final rightEarLocal = centers['right_ear'];
+    if (nose != null &&
+        leftEarLocal != null &&
+        rightEarLocal != null &&
+        leftEyeLocal != null &&
+        rightEyeLocal != null) {
       final cx = nose[0];
       final cy = nose[1];
-      final whiskersWidth = 140;
+
+      // Width: ear-to-ear distance * 2.0
+      final earDistance = math.sqrt(
+          math.pow(rightEarLocal[0] - leftEarLocal[0], 2) +
+              math.pow(rightEarLocal[1] - leftEarLocal[1], 2));
+      final whiskersWidth = math.max(160.0, earDistance * 2.0);
+
+      // Height: focus on lower face
+      final avgEyeY = (leftEyeLocal[1] + rightEyeLocal[1]) / 2;
+      final noseToEyeDist = avgEyeY - nose[1];
+      final marginYTop = math.max(25.0, noseToEyeDist * 0.3);
+      final marginYBottom = math.max(70.0, noseToEyeDist * 1.2);
+
       final xMin = math.max(0, (cx - whiskersWidth / 2).round());
       final xMax = math.min(image.width, (cx + whiskersWidth / 2).round());
-      final yMin = math.max(0, (cy - 20).round());
-      final yMax = math.min(image.height, (cy + 80).round());
+      final yMin = math.max(0, (cy - marginYTop).round());
+      final yMax = math.min(image.height, (cy + marginYBottom).round());
 
       if (xMax > xMin && yMax > yMin) {
         final cropped = img.copyCrop(image, x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin);
@@ -489,14 +527,9 @@ class AIScoringService {
 
         final probabilities = outputData.first as List<double>;
 
-        // DEBUG: Log raw model outputs
-        print('[DART DEBUG] ${regionName}_scorer raw outputs: $probabilities');
-
         final predictedClass =
             probabilities.indexOf(probabilities.reduce(math.max));
         scores[regionName] = predictedClass;
-        print(
-            '[DART DEBUG] ${regionName}_scorer predicted class: ${scores[regionName]}');
       } else {
         scores[regionName] = 0;
       }
@@ -546,8 +579,7 @@ class AIScoringService {
     return result;
   }
 
-  /// Prepare image for TFLite inference (NCHW format)
-  /// Matches Python's prepare_image_for_tflite() exactly
+  /// Prepare image for TFLite inference (NHWC format)
   List<List<List<List<double>>>> prepareImageForInference(img.Image image,
       {bool normalize = true, String regionName = "unknown"}) {
     // Ensure we have an RGB image
@@ -569,57 +601,24 @@ class AIScoringService {
     final width = rgbImage.width;
     final height = rgbImage.height;
 
-    // DEBUG: Log first 10 raw pixel values before normalization (y=0, x=0-9)
-    print('\n[DART DEBUG] $regionName - Raw pixels (y=0, x=0-9):');
-    final rawPixels = <double>[];
-    for (int x = 0; x < 10; x++) {
-      final pixel = rgbImage.getPixel(x, 0);
-      rawPixels.add(pixel.r.toDouble());
-    }
-    print('  R channel raw: $rawPixels');
-
-    // Build NCHW tensor - matching Python's np.transpose(img_array, (2, 0, 1))
+    // Build NHWC tensor (batch, height, width, channels)
     final tensor = List.generate(
-        1,
-        (b) => [
-              // Channel 0 (Red in RGB) - matching Python: mean=0.485, std=0.229
-              List.generate(
-                  height,
-                  (y) => List.generate(width, (x) {
-                        final pixel = rgbImage.getPixel(x, y);
-                        final r = pixel.r.toDouble() / 255.0;
-                        return normalize ? (r - 0.485) / 0.229 : r;
-                      })),
-              // Channel 1 (Green in RGB) - matching Python: mean=0.456, std=0.224
-              List.generate(
-                  height,
-                  (y) => List.generate(width, (x) {
-                        final pixel = rgbImage.getPixel(x, y);
-                        final g = pixel.g.toDouble() / 255.0;
-                        return normalize ? (g - 0.456) / 0.224 : g;
-                      })),
-              // Channel 2 (Blue in RGB) - matching Python: mean=0.406, std=0.225
-              List.generate(
-                  height,
-                  (y) => List.generate(width, (x) {
-                        final pixel = rgbImage.getPixel(x, y);
-                        final b = pixel.b.toDouble() / 255.0;
-                        return normalize ? (b - 0.406) / 0.225 : b;
-                      }))
-            ]);
+        1, // batch size = 1
+        (b) => List.generate(
+            height,
+            (y) => List.generate(width, (x) {
+                  final pixel = rgbImage.getPixel(x, y);
+                  final r = pixel.r.toDouble() / 255.0;
+                  final g = pixel.g.toDouble() / 255.0;
+                  final b = pixel.b.toDouble() / 255.0;
 
-    // DEBUG: Log first 10 values of each channel (NCHW format)
-    // Match Python's format: input_data[0, c, 0, :10] - first 10 values of first row
-    print('\n[DART DEBUG] $regionName - Input tensor (NCHW):');
-    for (int c = 0; c < 3; c++) {
-      final cName = c == 0 ? 'R' : (c == 1 ? 'G' : 'B');
-      final first10 = <double>[];
-      // Match Python: input_data[0, c, 0, :10] - first row (y=0), first 10 columns (x=0-9)
-      for (int x = 0; x < 10; x++) {
-        first10.add(tensor[0][c][0][x]);
-      }
-      print('  Channel $cName (c=$c): $first10');
-    }
+                  // Apply ImageNet normalization
+                  final normalizedR = normalize ? (r - 0.485) / 0.229 : r;
+                  final normalizedG = normalize ? (g - 0.456) / 0.224 : g;
+                  final normalizedB = normalize ? (b - 0.406) / 0.225 : b;
+
+                  return [normalizedR, normalizedG, normalizedB];
+                })));
 
     return tensor;
   }
@@ -658,17 +657,6 @@ class AIScoringService {
   List<dynamic> runInference(Interpreter interpreter, List<List<List<List<double>>>> inputData) {
     final outputShape = interpreter.getOutputTensors()[0].shape;
 
-    // DEBUG: Log input shape
-    print(
-        '[DART DEBUG] Inference input shape: [1, 3, ${inputData[0][0].length}, ${inputData[0][0][0].length}]');
-    // First 6 values of R channel, y=0
-    final first6 = <double>[];
-    for (int x = 0; x < 6; x++) {
-      first6.add(inputData[0][0][0][x]);
-    }
-    print(
-        '[DART DEBUG] Inference input first values (R channel, y=0, x=0-5): $first6');
-
     List output;
     if (outputShape.length == 2 && outputShape[0] == 1) {
       final featureSize = outputShape[1];
@@ -683,12 +671,9 @@ class AIScoringService {
 
     interpreter.run(inputData, output);
 
-    // DEBUG: Log output
     if (output is List && output.isNotEmpty && output[0] is List) {
-      print('[DART DEBUG] Inference output: ${(output[0] as List).toList()}');
       return [output[0]];
     }
-    print('[DART DEBUG] Inference output: $output');
     return [output];
   }
 }
