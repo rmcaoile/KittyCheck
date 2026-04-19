@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/models/fgs_result.dart';
 import 'package:cat_pain_detector/services/database_service.dart';
+import 'package:cat_pain_detector/services/history_settings_service.dart';
 import 'package:cat_pain_detector/history/history_item.dart';
 import 'package:cat_pain_detector/history/saved_result_page.dart';
 
@@ -26,6 +27,7 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final DatabaseService _dbService = DatabaseService();
+  final HistorySettingsService _settingsService = HistorySettingsService();
   final TextEditingController _searchController = TextEditingController();
 
   List<FGSResult> _allResults = [];
@@ -38,8 +40,13 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    _loadResults();
+    _loadSortOption();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _loadSortOption() async {
+    _currentSort = await _settingsService.getSortOption();
+    _loadResults();
   }
 
   @override
@@ -140,6 +147,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     if (selected != null && selected != _currentSort) {
       setState(() => _currentSort = selected);
+      await _settingsService.setSortOption(selected);
       await _loadResults();
     }
   }
