@@ -27,85 +27,85 @@ class _FauEditPageState extends State<FauEditPage> {
       {
         'score': 0,
         'images': ['assets/fgs_manual/ears_0.png'],
-        'description': 'The ears are upwards and facing forward.',
+        'description': 'Ears are positioned upright and directed forward.',
       },
       {
         'score': 1,
         'images': ['assets/fgs_manual/ears_1.png'],
-        'description': 'The ears are slightly pulled apart (the distance between the ear tips is increased). Score 1 if uncertain.',
+        'description': 'Ears are slightly drawn apart, with an increased distance between the ear tips.',
       },
       {
         'score': 2,
         'images': ['assets/fgs_manual/ears_2.png'],
-        'description': 'The ears are flattened and rotated outwards. The ear tips are clearly pulled apart. The back of the ears is visible.',
+        'description': 'Ears are flattened and turned outward, with ear tips clearly separated and the backs of the ears visible.',
       },
     ],
     'Eyes': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/eyes_0.png'],
-        'description': 'The eyes are round and open.',
+        'description': 'Eyes appear fully open with a round shape.',
       },
       {
         'score': 1,
         'images': ['assets/fgs_manual/eyes_1.png'],
-        'description': 'The eyes are partially closed.',
+        'description': 'Eyes are slightly closed.',
       },
       {
         'score': 2,
         'images': ['assets/fgs_manual/eyes_2.png'],
-        'description': 'The eyes are squinted (almost closed).',
+        'description': 'Eyes are squinted, appearing nearly closed.',
       },
     ],
     'Muzzle': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/muzzle_0.png'],
-        'description': 'The muzzle is relaxed and has a round shape.',
+        'description': 'Muzzle appears relaxed and rounded.',
       },
       {
         'score': 1,
         'images': ['assets/fgs_manual/muzzle_1.png'],
-        'description': 'The muzzle is mildly tense and flattened. Score 1 if uncertain.',
+        'description': 'Muzzle shows slight tension.',
       },
       {
         'score': 2,
         'images': ['assets/fgs_manual/muzzle_2.png'],
-        'description': 'The muzzle is clearly tense and flattened/stretched. It has an elliptical shape.',
+        'description': 'Muzzle is visibly tense and flattened, taking on an elliptical shape.',
       },
     ],
     'Whiskers': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/whiskers_0.png'],
-        'description': 'The whiskers are relaxed, spread out and loosely curved.',
+        'description': 'Whiskers appear relaxed with a natural spread and a curved.',
       },
       {
         'score': 1,
         'images': ['assets/fgs_manual/whiskers_1.png'],
-        'description': 'The whiskers are closer together at their origin. They can be slightly curved or straight. Score 1 if uncertain.',
+        'description': 'Whiskers are closer together and may appear straight or slightly curved.',
       },
       {
         'score': 2,
         'images': ['assets/fgs_manual/whiskers_2.png'],
-        'description': 'The whiskers are tense and normally spiked at the end (moving forward and away from the face).',
+        'description': 'Whiskers are tense, straightened, and directed away from the face.',
       },
     ],
     'Head Position': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/head_0a.png', 'assets/fgs_manual/head_0b.png'],
-        'description': 'The head is above the shoulder line. The cat may be standing or lying (in a comfortable and relaxed position).',
+        'description': 'Head is higher than the shoulder level.',
       },
       {
         'score': 1,
         'images': ['assets/fgs_manual/head_1.png'],
-        'description': 'The head is aligned with the shoulder line. Score 1 if uncertain.',
+        'description': 'Head is in line with the shoulder level.',
       },
       {
         'score': 2,
-        'images': ['assets/fgs_manual/head_2a.png', 'assets/fgs_manual/head_2b.png'],
-        'description': 'The head is below the shoulder line OR tilted down (chin towards the chest).',
+        'images': ['assets/fgs_manual/head_2.png'],
+        'description': 'Head is positioned below the shoulder level or tilted downward.',
       },
     ],
   };

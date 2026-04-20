@@ -87,13 +87,13 @@ class _SavedResultPageState extends State<SavedResultPage> {
 
   String _getAssessmentText(int score) {
     if (score == 0) {
-      return 'This cat is not in pain. However, if you are a cat owner and you are concerned or think your cat may be in pain, please consult your veterinary surgeon.';
+      return 'This cat shows no observable signs of pain. \nHowever, if you are concerned about your cat’s condition or suspect discomfort, it is recommended to seek advice from a licensed veterinarian.';
     } else if (score >= 1 && score <= 3) {
-      return 'This cat is not in pain or has mild pain. Pain should be reevaluated at regular intervals since FGS scores could increase, and the cat might require analgesics.';
+      return 'This cat shows either no signs of pain or only mild discomfort. \nHowever, if you are concerned about your cat’s condition or suspect discomfort, it is recommended to seek advice from a licensed veterinarian.';
     } else if (score >= 4 && score <= 8) {
-      return 'This cat is likely to be in pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
+      return 'The cat is likely in pain, and additional analgesia may be needed. Cat owners should consult a licensed veterinarian if they have any concerns about their cat’s health and avoid giving medications without professional advice. \nTreatment decisions must be based on clinical judgement, considering the cat’s condition and prior medications. If uncertain, reassess after 10–15 minutes, as scores may also be influenced by stress, fear, or sedation.';
     } else if (score >= 9 && score <= 10) {
-      return 'This cat is likely to be in severe pain. This score indicates the need for additional analgesia. This decision should be made by a veterinary surgeon based on clinical judgement, and in consideration of the physical status of the patient and other drugs previously administered. If in doubt, reassess the cat in 10-15 minutes to reconfirm scores. Clinical judgement will differentiate if the FGS scores are high due to pain, rather than other factors such as stress, fear or sedation.';
+      return 'The cat is likely experiencing severe pain, and additional analgesia may be needed. Cat owners should consult a licensed veterinarian if they have any concerns about their cat’s health and avoid giving medications without professional advice. \nTreatment decisions must be based on clinical judgement, considering the cat’s condition and prior medications. If uncertain, reassess after 10–15 minutes, as scores may also be influenced by stress, fear, or sedation.';
     } else {
       return 'Invalid score';
     }
