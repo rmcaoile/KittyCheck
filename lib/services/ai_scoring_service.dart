@@ -305,11 +305,14 @@ class AIScoringService {
       return {'image': image, 'centers': centers};
     }
 
-    final nose = centers['nose'];
-    if (nose == null) return {'image': image, 'centers': centers};
+    final leftEye = centers['left_eye'];
+    final rightEye = centers['right_eye'];
+    if (leftEye == null || rightEye == null) {
+      return {'image': image, 'centers': centers};
+    }
 
-    final centerX = nose[0];
-    final centerY = nose[1];
+    final centerX = (leftEye[0] + rightEye[0]) / 2;
+    final centerY = (leftEye[1] + rightEye[1]) / 2;
 
     final cosA = math.cos(angle * math.pi / 180.0);
     final sinA = math.sin(angle * math.pi / 180.0);
