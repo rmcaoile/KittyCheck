@@ -475,7 +475,7 @@ class _FauEditPageState extends State<FauEditPage> {
                                 child: Center(
                                   child: Image.asset(
                                     images[0],
-                                    height: 120,
+                                    height: 150,
                                     fit: BoxFit.contain,
                                   ),
                                 ),
@@ -492,7 +492,7 @@ class _FauEditPageState extends State<FauEditPage> {
                                         onTap: () => _onImageTap(image),
                                         child: Image.asset(
                                           image,
-                                          height: 120,
+                                          height: 150,
                                           fit: BoxFit.contain,
                                         ),
                                       ),

@@ -505,7 +505,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                         child: Center(
                           child: Image.asset(
                             images[0],
-                            height: 120,
+                            height: 150,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -541,7 +541,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                                 },
                                 child: Image.asset(
                                   entry.value,
-                                  height: 120,
+                                  height: 150,
                                   fit: BoxFit.contain,
                                 ),
                               ),
