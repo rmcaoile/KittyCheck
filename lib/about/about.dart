@@ -61,7 +61,7 @@ class AboutPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'KittyCheck is a mobile application that helps assess acute pain in cats by analyzing facial expressions using the Feline Grimace Scale (FGS). The app combines AI-assisted scoring with the option for users to manually adjust scores, providing both automated and interactive assessment for research or educational purposes. Users can save assessments in history records for later review.',
+                'KittyCheck is a mobile application that helps assess acute pain in cats by analyzing facial expressions using the Feline Grimace Scale (FGS). The app combines AI-assisted scoring with the option for users to manually adjust scores, providing both automated and interactive assessment for research and educational purposes. Users can save assessments in history records for later review.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
@@ -142,7 +142,7 @@ class AboutPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '1. Take a photo of a cat\'s face.',
+                    '1. Capture or upload an image of the cat’s face.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -151,28 +151,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '2. AI models detect the face and key facial regions, then score each region based on the FGS methodology.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: Text(
-                      'Facial regions scored: Ears, Eyes (orbital tightening), Muzzle, Whiskers, Head position.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        height: 1.5,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '3. Manual override: Users can adjust scores with guidance from in-app tutorials.',
+                    '2. The system detects facial landmarks and analyzes key regions based on the Feline Grimace Scale (FGS).',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -181,7 +160,25 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '4. Save results: Each assessment is stored for historical tracking and analysis.',
+                    '3. Each facial action unit is scored using trained AI models.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '3. Users can manually adjust scores with reference to the in-app guide derived from FGS guidelines.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '4. Results can be saved for tracking and future review.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -215,7 +212,7 @@ class AboutPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '• The Feline Grimace Scale (FGS) methodology was developed by Evangelista et al., 2019.',
+                    '• The Feline Grimace Scale (FGS) was developed by Evangelista et al., 2019.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -224,7 +221,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Descriptions of facial action units and scoring guidelines are adapted from the official FGS manual.',
+                    '• Descriptions of facial action units and scoring guidelines used in this application are adapted from the official FGS manual.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -233,7 +230,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Learn more from the official FGS resources: felinegrimacescale.com.',
+                    '• Learn more from the official FGS website: felinegrimacescale.com.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -275,16 +272,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Images, diagrams, and tutorials in this app are original and created for this app; no copyrighted materials from the official FGS manual are reproduced.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '• This app is intended for educational and research purposes and should not replace veterinary diagnosis or treatment.',
+                    '• All images, diagrams, and instructional materials are created specifically for this application. No copyrighted content from the official FGS manual is reproduced.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -329,7 +317,7 @@ class AboutPage extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.only(left: 16),
                     child: Text(
-                      'Face detection: Custom-trained model (method inspired by Automated Detection of Cat Facial Landmarks, George Martvel, Ilan Shimshoni, Anna Zamansky)',
+                      'Face detection and Facial Region detection: Custom-trained model (method inspired by Automated Detection of Cat Facial Landmarks, George Martvel, Ilan Shimshoni, Anna Zamansky)',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.black87,
@@ -337,30 +325,18 @@ class AboutPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: Text(
-                      'Facial region detection: Custom-trained model (method inspired by Automated Detection of Cat Facial Landmarks, George Martvel, Ilan Shimshoni, Anna Zamansky)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: Text(
-                      'FGS scoring: 5 independent classifiers for each facial action unit',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
+                  // SizedBox(height: 8),
+                  // Padding(
+                  //   padding: EdgeInsets.only(left: 16),
+                  //   child: Text(
+                  //     'FGS scoring: 5 independent classifiers for each facial action unit',
+                  //     style: TextStyle(
+                  //       fontSize: 14,
+                  //       color: Colors.black87,
+                  //       height: 1.5,
+                  //     ),
+                  //   ),
+                  // ),
                   SizedBox(height: 16),
                   Text(
                     'Special Thanks: The Feline Grimace Scale (FGS) team for their pioneering work on acute feline pain assessment',
