@@ -13,7 +13,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   // DEBUG: set to true to always show onboarding
-  const bool debugForceOnboarding = true;
+  const bool debugForceOnboarding = false;
   final hasSeenOnboarding = debugForceOnboarding
       ? false
       : (prefs.getBool('hasSeenOnboarding') ?? false);
