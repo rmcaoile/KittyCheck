@@ -384,7 +384,7 @@ class _PhotoGuidePage extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Make sure the cat\'s face is in frame before taking the photo.',
+                          'Make sure the cat\'s face is in frame and centered before taking the photo.',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
