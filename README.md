@@ -26,3 +26,8 @@ build/app/outputs/flutter-apk/app-release.apk
 <!-- To run in android studio -->
 flutter emulators --launch Pixel_6_API_34
 flutter run
+
+
+## Attribution
+
+- Cat face icons: [Emoji icons created by Ains - Flaticon](https://www.flaticon.com/free-icons/emoji)

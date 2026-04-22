@@ -1,25 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/navbar.dart';
 import 'package:cat_pain_detector/home/home.dart';
+import 'package:cat_pain_detector/home/onboarding_page.dart';
 import 'package:cat_pain_detector/history/history.dart';
 import 'package:cat_pain_detector/about/about.dart';
 import 'package:cat_pain_detector/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GlobalKey<_MyHomePageState> homePageKey = GlobalKey<_MyHomePageState>();
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  // DEBUG: set to true to always show onboarding
+  const bool debugForceOnboarding = true;
+  final hasSeenOnboarding = debugForceOnboarding
+      ? false
+      : (prefs.getBool('hasSeenOnboarding') ?? false);
+  runApp(MyApp(showOnboarding: !hasSeenOnboarding));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool showOnboarding;
+
+  const MyApp({super.key, this.showOnboarding = false});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'KittyCheck',
       theme: appTheme,
-      home: MyHomePage(key: homePageKey),
+      home: showOnboarding
+          ? const OnboardingPage()
+          : MyHomePage(key: homePageKey),
     );
   }
 }

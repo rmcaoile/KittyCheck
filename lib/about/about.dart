@@ -1,9 +1,99 @@
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/settings/scoring_settings_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
+
+  Widget _buildFGSItem(String number, String name) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: darkBlue,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: whiteColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem(String number, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: darkBlue,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: whiteColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +105,7 @@ class AboutPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // App Logo/Title
-            const SizedBox(height: 20),
+            // const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -42,7 +132,7 @@ class AboutPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 10),
 
             // About Section
             const Text(
@@ -55,19 +145,70 @@ class AboutPage extends StatelessWidget {
             ),
             const SizedBox(height: 15),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(
+                  left: 16, right: 16, top: 16, bottom: 16),
               decoration: BoxDecoration(
                 color: Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'KittyCheck is a mobile application that helps assess acute pain in cats by analyzing facial expressions using the Feline Grimace Scale (FGS). The app combines AI-assisted scoring with the option for users to manually adjust scores, providing both automated and interactive assessment for research and educational purposes. Users can save assessments in history records for later review.',
+                'KittyCheck is a mobile application that helps assess acute pain in cats by analyzing facial expressions using the Feline Grimace Scale (FGS). The app combines AI-assisted scoring with the option for users to manually adjust scores, providing both automated and interactive assessment for research and educational purposes. Users can save assessments in history for later review.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
                   height: 1.5,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.justify,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // FGS Explanation Section
+            const Text(
+              'The Feline Grimace Scale (FGS)',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 15),
+            Container(
+              padding: const EdgeInsets.only(
+                  left: 16, right: 16, top: 16, bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'The Feline Grimace Scale (FGS) is a validated and easy-to-use tool for assessing acute pain in cats through facial expressions (Evangelista et al., 2019). It evaluates five facial action units scored from 0 to 2, with a maximum total of 10. Higher scores indicate a greater likelihood of pain, and a score of 4 or above may suggest the need for analgesic treatment, depending on the cat\'s condition and existing medications. The FGS is intended for acute pain assessment and is not considered reliable for chronic conditions.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'The five facial action units are:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildFGSItem('1', 'Ear Position'),
+                  _buildFGSItem('2', 'Orbital Tightening'),
+                  _buildFGSItem('3', 'Muzzle Tension'),
+                  _buildFGSItem('4', 'Whiskers Change'),
+                  _buildFGSItem('5', 'Head Position'),
+                ],
               ),
             ),
 
@@ -75,7 +216,8 @@ class AboutPage extends StatelessWidget {
 
             // Responsible Use Section
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(
+                  left: 16, right: 16, top: 16, bottom: 16),
               decoration: BoxDecoration(
                 color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -84,7 +226,7 @@ class AboutPage extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -114,6 +256,7 @@ class AboutPage extends StatelessWidget {
                       color: Colors.black87,
                       height: 1.4,
                     ),
+                    textAlign: TextAlign.justify,
                   ),
                 ],
               ),
@@ -121,8 +264,7 @@ class AboutPage extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // How It Works Section
-            // TODO: improve
+// How It Works Section
             const Text(
               'How It Works',
               style: TextStyle(
@@ -138,52 +280,33 @@ class AboutPage extends StatelessWidget {
                 color: Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '1. Capture or upload an image of the cat’s face.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
+                  _buildStepItem(
+                    '1',
+                    'Capture or Upload',
+                    'Take or upload a photo of your cat\'s face',
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    '2. The system detects facial landmarks and analyzes key regions based on the Feline Grimace Scale (FGS).',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
+                  _buildStepItem(
+                    '2',
+                    'Detect Facial Landmarks',
+                    'The system detects facial landmarks and extracts key regions for FGS analysis',
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    '3. Each facial action unit is scored using trained AI models.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
+                  _buildStepItem(
+                    '3',
+                    'Automated Scoring',
+                    'Each facial action unit is scored using trained AI models',
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    '3. Users can manually adjust scores with reference to the in-app guide derived from FGS guidelines.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
+                  _buildStepItem(
+                    '4',
+                    'Manual Adjustment',
+                    'Users can manually adjust scores with reference to the in-app guide',
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    '4. Results can be saved for tracking and future review.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
+                  _buildStepItem(
+                    '5',
+                    'Save Results',
+                    'Results can be saved for tracking and future review',
                   ),
                 ],
               ),
@@ -208,7 +331,7 @@ class AboutPage extends StatelessWidget {
                 color: Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -221,7 +344,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Descriptions of facial action units and scoring guidelines used in this application are adapted from the official FGS manual.',
+                    '• Descriptions of facial action units, instructions, and scoring guidelines used in this application are adapted from the official FGS manual.',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
@@ -230,11 +353,59 @@ class AboutPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Learn more from the official FGS website: felinegrimacescale.com.',
+                    '• Learn more from the official FGS website: ',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
                       height: 1.5,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      final uri = Uri.parse('https://felinegrimacescale.com');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Text(
+                      'felinegrimacescale.com',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: lightBlue,
+                        fontWeight: FontWeight.bold,
+                        height: 1.5,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '• Cat icons: ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      final uri = Uri.parse(
+                          'https://www.flaticon.com/free-icons/emoji');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Text(
+                      'Emoji icons created by Ains - Flaticon',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: lightBlue,
+                        fontWeight: FontWeight.bold,
+                        height: 1.5,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ],
@@ -339,6 +510,27 @@ class AboutPage extends StatelessWidget {
                   // ),
                   SizedBox(height: 16),
                   Text(
+                    'Developer:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: 16),
+                    child: Text(
+                      'Ralph Philip M. Caoile',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
                     'Special Thanks: The Feline Grimace Scale (FGS) team for their pioneering work on acute feline pain assessment',
                     style: TextStyle(
                       fontSize: 14,
@@ -368,7 +560,8 @@ class AboutPage extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: lightBlue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
