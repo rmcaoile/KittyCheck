@@ -350,7 +350,7 @@ class _ResultDetailPageState extends State<ResultDetailPage> {
                   // Ear
                   _buildFauItem(
                       context,
-                      'Ear',
+                      'Ears',
                       _currentResult.earImagePath ?? '',
                       _currentResult.earScore),
                   const SizedBox(height: 8),

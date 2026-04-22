@@ -31,7 +31,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   // Reference data for FGS scoring
   static const Map<String, List<Map<String, dynamic>>> referenceData = {
-    'Ear': [
+    'Ears': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/ears_0.png'],
@@ -120,7 +120,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   int _getActualScore() {
     switch (widget.region) {
-      case 'Ear':
+      case 'Ears':
         return _currentResult.earScore;
       case 'Eyes':
         return _currentResult.eyesScore;
@@ -137,7 +137,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   String? _getSubjectImagePath() {
     switch (widget.region) {
-      case 'Ear':
+      case 'Ears':
         return _currentResult.earImagePath;
       case 'Eyes':
         return _currentResult.eyesImagePath;
@@ -275,7 +275,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     if (newScore != null && mounted) {
       // Calculate what each score will be after update
       final newEarScore =
-          (widget.region == 'Ear') ? newScore : _currentResult.earScore;
+          (widget.region == 'Ears') ? newScore : _currentResult.earScore;
       final newEyesScore =
           (widget.region == 'Eyes') ? newScore : _currentResult.eyesScore;
       final newMuzzleScore =
@@ -295,7 +295,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
       setState(() {
         switch (widget.region) {
-          case 'Ear':
+          case 'Ears':
             _currentResult = _currentResult.copyWith(
               earScore: newScore,
               totalFgsScore: newTotalScore,

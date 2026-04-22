@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/utils/string_utils.dart';
@@ -33,7 +33,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
 
   bool _isLoading = true;
   String? _errorMessage;
-  bool _useAIScoring = false;
+  bool _useAIScoring = true;
 
   final AIScoringService _aiService = AIScoringService();
   final ScoringSettingsService _settingsService = ScoringSettingsService();

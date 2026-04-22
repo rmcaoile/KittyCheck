@@ -226,7 +226,7 @@ class _EditResultPageState extends State<EditResultPage> {
   Future<void> _navigateToFauEdit(String region) async {
     int currentScore;
     switch (region) {
-      case 'Ear':
+      case 'Ears':
         currentScore = _earScore;
         break;
       case 'Eyes':
@@ -259,7 +259,7 @@ class _EditResultPageState extends State<EditResultPage> {
     if (newScore != null) {
       setState(() {
         switch (region) {
-          case 'Ear':
+          case 'Ears':
             _earScore = newScore;
             break;
           case 'Eyes':
@@ -390,8 +390,8 @@ class _EditResultPageState extends State<EditResultPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildFauItem('Ear', widget.result.earImagePath ?? '',
-                        _earScore, () => _navigateToFauEdit('Ear')),
+                    _buildFauItem('Ears', widget.result.earImagePath ?? '',
+                        _earScore, () => _navigateToFauEdit('Ears')),
                     const SizedBox(height: 8),
                     _buildFauItem('Eyes', widget.result.eyesImagePath ?? '',
                         _eyesScore, () => _navigateToFauEdit('Eyes')),

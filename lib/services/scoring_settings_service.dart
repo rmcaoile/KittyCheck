@@ -7,8 +7,8 @@ class ScoringSettingsService {
   /// Get whether AI scoring is enabled
   Future<bool> getUseAIScoring() async {
     final prefs = await SharedPreferences.getInstance();
-    // Default to false (random scoring) for backward compatibility
-    return prefs.getBool(_useAIScoringKey) ?? false;
+    // Default to true (AI scoring) for better user experience
+    return prefs.getBool(_useAIScoringKey) ?? true;
   }
 
   /// Set whether AI scoring is enabled

@@ -23,7 +23,7 @@ class FauEditPage extends StatefulWidget {
 class _FauEditPageState extends State<FauEditPage> {
   // Reference data for FGS scoring
   static const Map<String, List<Map<String, dynamic>>> referenceData = {
-    'Ear': [
+    'Ears': [
       {
         'score': 0,
         'images': ['assets/fgs_manual/ears_0.png'],
@@ -122,7 +122,7 @@ class _FauEditPageState extends State<FauEditPage> {
 
   int _getActualScore() {
     switch (widget.region) {
-      case 'Ear':
+      case 'Ears':
         return widget.result.earScore;
       case 'Eyes':
         return widget.result.eyesScore;
@@ -139,7 +139,7 @@ class _FauEditPageState extends State<FauEditPage> {
 
   String? _getSubjectImagePath() {
     switch (widget.region) {
-      case 'Ear':
+      case 'Ears':
         return widget.result.earImagePath;
       case 'Eyes':
         return widget.result.eyesImagePath;

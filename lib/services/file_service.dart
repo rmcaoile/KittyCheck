@@ -46,7 +46,7 @@ class FileService {
     final List<String> imagePaths = [];
 
     final regionKeys = ['ears', 'eyes', 'muzzle', 'whiskers', 'head'];
-    final regionNames = ['ear', 'eyes', 'muzzle', 'whiskers', 'head'];
+    final regionNames = ['ears', 'eyes', 'muzzle', 'whiskers', 'head'];
 
     for (int i = 0; i < regionKeys.length; i++) {
       final regionKey = regionKeys[i];

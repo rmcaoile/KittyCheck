@@ -543,36 +543,36 @@ class AboutPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 30),
+            // const SizedBox(height: 30),
 
-            // Settings Button
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScoringSettingsPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.settings),
-              label: const Text('Scoring Settings'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: lightBlue,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+            // // Settings Button
+            // ElevatedButton.icon(
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => const ScoringSettingsPage(),
+            //       ),
+            //     );
+            //   },
+            //   icon: const Icon(Icons.settings),
+            //   label: const Text('Scoring Settings'),
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: lightBlue,
+            //     foregroundColor: Colors.white,
+            //     padding:
+            //         const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            //     shape: RoundedRectangleBorder(
+            //       borderRadius: BorderRadius.circular(12),
+            //     ),
+            //   ),
+            // ),
 
             const SizedBox(height: 30),
 
             // Version Info
             const Text(
-              'Version 1.0.0',
+              'Version 1.1.0',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.black38,
