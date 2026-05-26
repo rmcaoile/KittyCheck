@@ -9,7 +9,7 @@ import 'package:cat_pain_detector/utils/string_utils.dart';
 
 class EditResultPage extends StatefulWidget {
   final FGSResult result;
-  final bool isTemporary; // true for unsaved results, false for saved results
+  final bool isTemporary;
 
   const EditResultPage({
     super.key,

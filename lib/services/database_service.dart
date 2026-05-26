@@ -160,7 +160,6 @@ class DatabaseService {
     });
   }
 
-  // TODO: handle increment/decrement when a cat name is deleted
   Future<int> getNextCatNumber() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.rawQuery('''

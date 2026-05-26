@@ -217,7 +217,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
   List<String> _buildLabels() {
     final List<String> labels = [];
     final subjectPath = _getSubjectImagePath();
-    final actualScore = _getActualScore();
 
     if (subjectPath != null && subjectPath.isNotEmpty) {
       labels.add(

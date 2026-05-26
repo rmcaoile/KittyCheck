@@ -33,7 +33,7 @@ class FGSResult {
     this.headPositionImagePath,
   });
 
-  // Create from JSON (for database)
+  // Create from JSON
   factory FGSResult.fromJson(Map<String, dynamic> json) {
     return FGSResult(
       id: json['id'] as int?,
@@ -54,7 +54,7 @@ class FGSResult {
     );
   }
 
-  // Convert to JSON (for database)
+  // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,

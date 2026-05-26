@@ -120,23 +120,6 @@ class _FauEditPageState extends State<FauEditPage> {
     _selectedScore = _currentScore;
   }
 
-  int _getActualScore() {
-    switch (widget.region) {
-      case 'Ears':
-        return widget.result.earScore;
-      case 'Eyes':
-        return widget.result.eyesScore;
-      case 'Muzzle':
-        return widget.result.muzzleScore;
-      case 'Whiskers':
-        return widget.result.whiskersScore;
-      case 'Head Position':
-        return widget.result.headPositionScore;
-      default:
-        return 0;
-    }
-  }
-
   String? _getSubjectImagePath() {
     switch (widget.region) {
       case 'Ears':

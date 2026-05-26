@@ -84,13 +84,11 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
           // Zoom at the tapped point
           final px = _lastZoomPosition!.dx;
           final py = _lastZoomPosition!.dy;
-          _transformationController.value = Matrix4.identity()
-            ..translate(px, py)
-            ..scale(zoomScale)
-            ..translate(-px, -py);
+          _transformationController.value = Matrix4.translationValues(px, py, 0)
+              * Matrix4.diagonal3Values(zoomScale, zoomScale, 1)
+              * Matrix4.translationValues(-px, -py, 0);
         } else {
-          _transformationController.value = Matrix4.identity()
-            ..scale(zoomScale);
+          _transformationController.value = Matrix4.diagonal3Values(zoomScale, zoomScale, 1);
         }
       }
     });

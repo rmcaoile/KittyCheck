@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:cat_pain_detector/utils/string_utils.dart';
@@ -93,7 +93,7 @@ class _FGSResultPageState extends State<FGSResultPage> {
 
   Future<void> _runAIScoring() async {
     try {
-      // Initialize AI models (only once)
+      // Initialize AI models
       await _aiService.initialize();
 
       // Perform AI cropping and scoring
@@ -336,102 +336,6 @@ class _FGSResultPageState extends State<FGSResultPage> {
     }
   }
 
-  /// Build a tile for displaying a cropped region
-  Widget _buildCroppedRegionTile(String regionName, String imagePath, int score) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ImageViewerPage(imagePath: imagePath),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey, width: 1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.file(
-                  File(imagePath),
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
-                children: [
-                  Text(
-                    regionName,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Score: $score',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build a score display widget
-  Widget _buildScoreDisplay(String regionName, int score) {
-    return Column(
-      children: [
-        Text(
-          regionName,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getScoreColor(score).withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _getScoreColor(score),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            '$score',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: _getScoreColor(score),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Get color for score display
-  Color _getScoreColor(int score) {
-    if (score == 0) return Colors.green;
-    if (score == 1) return Colors.yellow;
-    if (score == 2) return Colors.red;
-    return Colors.grey;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -552,103 +456,6 @@ class _FGSResultPageState extends State<FGSResultPage> {
             else
               Column(
                 children: [
-                  /*
-                  // Scoring method indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _useAIScoring ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _useAIScoring ? Colors.green : Colors.orange,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _useAIScoring ? 'AI Scoring' : 'Random Scoring',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: _useAIScoring ? Colors.green : Colors.orange,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // DEBUG: Show cropped regions for AI validation
-                  if (_useAIScoring && _tempCroppedImagePaths != null)
-                    Column(
-                      children: [
-                        const Text(
-                          'AI-Cropped Regions (Debug View)',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        // Grid of cropped region images
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          children: [
-                            _buildCroppedRegionTile('Ears', _tempCroppedImagePaths!['ears']!, earScore),
-                            _buildCroppedRegionTile('Eyes', _tempCroppedImagePaths!['eyes']!, eyesScore),
-                            _buildCroppedRegionTile('Muzzle', _tempCroppedImagePaths!['muzzle']!, muzzleScore),
-                            _buildCroppedRegionTile('Whiskers', _tempCroppedImagePaths!['whiskers']!, whiskersScore),
-                            _buildCroppedRegionTile('Head', _tempCroppedImagePaths!['head']!, headPositionScore),
-                            // Empty tile for spacing
-                            Container(),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        // Individual scores display
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey, width: 1),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Individual AI Scores',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildScoreDisplay('Ears', earScore),
-                                  _buildScoreDisplay('Eyes', eyesScore),
-                                  _buildScoreDisplay('Muzzle', muzzleScore),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildScoreDisplay('Whiskers', whiskersScore),
-                                  _buildScoreDisplay('Head', headPositionScore),
-                                  Container(width: 60), // Spacer
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  */
-
                   // View more details button
                   TextButton.icon(
                     onPressed: () async {

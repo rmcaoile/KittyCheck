@@ -10,8 +10,8 @@ import 'package:cat_pain_detector/home/edit_result.dart';
 
 class ResultDetailPage extends StatefulWidget {
   final FGSResult result;
-  final bool showDeleteButton; // true for history view, false for result view
-  final bool isTemporary; // true for unsaved results, false for saved results
+  final bool showDeleteButton;
+  final bool isTemporary;
   final VoidCallback? onResultDeleted;
   final void Function(FGSResult)? onResultUpdated;
 

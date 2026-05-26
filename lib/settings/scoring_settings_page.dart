@@ -414,10 +414,6 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        _useAIScoring ? Icons.smart_toy : Icons.smart_toy_outlined,
-                        color: _useAIScoring ? Colors.green : Colors.grey,
-                      ),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
@@ -481,10 +477,6 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        !_useAIScoring ? Icons.shuffle : Icons.shuffle_outlined,
-                        color: !_useAIScoring ? Colors.orange : Colors.grey,
-                      ),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
@@ -538,7 +530,6 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _runAIPipelineTest,
-                  icon: const Icon(Icons.science),
                   label: const Text('Test AI Pipeline'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: darkBlue,
@@ -565,7 +556,6 @@ class _ScoringSettingsPageState extends State<ScoringSettingsPage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _runCNNScorersTest,
-                  icon: const Icon(Icons.model_training),
                   label: const Text('Test CNN FGS Scorers'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple,

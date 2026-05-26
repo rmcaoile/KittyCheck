@@ -7,17 +7,16 @@ import 'package:cat_pain_detector/about/about.dart';
 import 'package:cat_pain_detector/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final GlobalKey<_MyHomePageState> homePageKey = GlobalKey<_MyHomePageState>();
+final GlobalKey<MyHomePageState> homePageKey = GlobalKey<MyHomePageState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  // DEBUG: set to true to always show onboarding
-  const bool debugForceOnboarding = false;
-  final hasSeenOnboarding = debugForceOnboarding
-      ? false
-      : (prefs.getBool('hasSeenOnboarding') ?? false);
-  runApp(MyApp(showOnboarding: !hasSeenOnboarding));
+  // TODO: debug set defaultValue to true to always show onboarding
+  const bool debugForceOnboarding = bool.fromEnvironment('DEBUG_FORCE_ONBOARDING', defaultValue: false);
+  final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+  final showOnboarding = debugForceOnboarding || !hasSeenOnboarding;
+  runApp(MyApp(showOnboarding: showOnboarding));
 }
 
 class MyApp extends StatelessWidget {
@@ -41,10 +40,10 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MyHomePage> createState() => MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[

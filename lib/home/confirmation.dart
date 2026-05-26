@@ -63,7 +63,6 @@ class ConfirmationPage extends StatelessWidget {
                   ),
                 ),
                 // Score FGS button
-                // TODO: loading screen while ai is scoring
                 ElevatedButton.icon(
                   onPressed: () {
                     // Navigate to FGS result page

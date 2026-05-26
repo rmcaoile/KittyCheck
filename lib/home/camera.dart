@@ -26,7 +26,6 @@ class _CameraPageState extends State<CameraPage> {
     _initializeCamera();
   }
 
-  // TODO: permissions
   Future<void> _initializeCamera() async {
     // Request camera permission
     final status = await Permission.camera.request();
@@ -103,7 +102,6 @@ class _CameraPageState extends State<CameraPage> {
       _isCameraInitialized = false;
     });
 
-    // Dispose current controller
     await _controller?.dispose();
 
     // Switch to next camera
@@ -218,7 +216,6 @@ class _CameraPageState extends State<CameraPage> {
                                 size: 40,
                               ),
                             ),
-                            // TODO: add loading screen after capturing image
                             // Capture button
                             GestureDetector(
                               onTap: _takePicture,

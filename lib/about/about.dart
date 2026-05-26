@@ -543,6 +543,7 @@ class AboutPage extends StatelessWidget {
               ),
             ),
 
+            // TODO: debug settings button
             // const SizedBox(height: 30),
 
             // // Settings Button

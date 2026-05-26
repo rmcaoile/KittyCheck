@@ -140,7 +140,7 @@ class AIScoringService {
 
     final croppedImages = <String, Uint8List>{};
     for (final entry in croppedRegions.entries) {
-      croppedImages[entry.key] = Uint8List.fromList(img.encodeJpg(entry.value as img.Image));
+      croppedImages[entry.key] = Uint8List.fromList(img.encodeJpg(entry.value));
     }
 
     // Create debug images
@@ -674,7 +674,7 @@ class AIScoringService {
 
     interpreter.run(inputData, output);
 
-    if (output is List && output.isNotEmpty && output[0] is List) {
+    if (output.isNotEmpty && output[0] is List) {
       return [output[0]];
     }
     return [output];
