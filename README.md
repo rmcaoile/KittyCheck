@@ -9,6 +9,13 @@ KittyCheck is a Flutter mobile application that helps assess acute pain in cats 
 - Save assessment results to history for later review
 - In-app guide and attribution links
 
+## Research Paper
+
+Full methodology, results, and discussion: 
+    
+    [Journal_Paper_CMSC190_RMCaoile.pdf]
+
+
 ## The Feline Grimace Scale (FGS)
 
 The FGS is a validated tool for assessing acute pain in cats by evaluating five facial action units (each scored 0–2). The five units used by KittyCheck are:
